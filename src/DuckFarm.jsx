@@ -11,6 +11,7 @@ import { Duck, G, B, PB, SL, Row } from './components';
 import { useGameState } from './useGameState';
 
 const CI=({s=13})=><img src="/coin.svg" alt="coin" style={{width:s,height:s,verticalAlign:"middle",display:"inline-block",marginBottom:1}}/>;
+const DI=({s=13})=><img src="/duky.svg" alt="duky" style={{width:s,height:Math.round(s*1.25),verticalAlign:"middle",display:"inline-block",marginBottom:1}}/>;
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 export default function DuckFarm(){
@@ -509,7 +510,7 @@ export default function DuckFarm(){
           <div style={{flex:1}}>
             <div style={{fontWeight:700,fontSize:13,color:reward.color}}>{reward.label} — Rank #{myRank}</div>
             <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",lineHeight:1.6}}>
-              {reward.duky>0&&<span>💎 {reward.duky} DUKY  </span>}
+              {reward.duky>0&&<span style={{display:"inline-flex",alignItems:"center",gap:3}}><DI s={13}/> {reward.duky} DUKY  </span>}
               {reward.syr>0&&<span>💉×{reward.syr}  </span>}
               {reward.med>0&&<span>💊×{reward.med}  </span>}
               {hasSeed&&<span>🌱 {seedLabel}</span>}
@@ -646,7 +647,7 @@ export default function DuckFarm(){
                   {!claimed && <PB pct={Math.min((current/ach.target)*100, 100)} color={isDone ? "#fbbf24" : "#6366f1"} h={3} style={{marginTop:4}} />}
                 </div>
                 <button style={{...S.btn, padding: "5px 10px", background: claimed ? "rgba(255,255,255,0.1)" : isDone ? "linear-gradient(135deg,#78350f,#fbbf24)" : "rgba(99,102,241,0.1)", opacity: isDone || claimed ? 1 : 0.4}} 
-                        onClick={() => isDone && !claimed && claimAchievement(ach.id)}>{claimed ? "✅" : `💎 ${ach.reward}`}</button>
+                        onClick={() => isDone && !claimed && claimAchievement(ach.id)}>{claimed ? "✅" : <><DI s={11}/> {ach.reward}</>}</button>
               </div>
             </G>
           );
@@ -716,7 +717,7 @@ export default function DuckFarm(){
           {[
             {e:"🥚",v:Math.floor(eggs),c:"#fbbf24"},
             {e:null,img:"/coin.svg",v:Math.floor(coins),c:"#ffd700"},
-            {e:"💎",v:fD(duky),c:"#f0abfc"},
+            {e:null,img:"/duky.svg",v:fD(duky),c:"#f0abfc"},
             {e:"🌾",v:Math.floor(feed),c:"#4ade80"},
           ].map(({e,img,v,c})=>(
             <div key={img||e} style={{...S.chip,borderColor:`${c}28`,background:`${c}0d`}}>
@@ -785,7 +786,7 @@ export default function DuckFarm(){
                             <Duck breedId={duck.bid} duckId={duck.id} size={190} tired={duck.tired} mining={!!mining} cooldown={!!onCd} lvl={duck.lvl} animType={animMap[duck.id]}/>
                           </div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:10}}>
-                            {[["🥚/min",((r?.eggRate||0)*(duck.tired?0.4:1)*mult*60).toFixed(2)],["🌾/feed",gL(duck.lvl).fpf||"—"],["💎/lvl",fD(DUKY_R[duck.rid]||0.001)]].map(([l,v])=>(
+                            {[["🥚/min",((r?.eggRate||0)*(duck.tired?0.4:1)*mult*60).toFixed(2)],["🌾/feed",gL(duck.lvl).fpf||"—"],["$/lvl",fD(DUKY_R[duck.rid]||0.001)]].map(([l,v])=>(
                               <div key={l} style={{background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"7px 5px",textAlign:"center"}}>
                                 <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>{l}</div>
                                 <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700}}>{v}</div>
@@ -1382,7 +1383,7 @@ export default function DuckFarm(){
 
             {/* DUKY Hunt banner */}
             <G style={{background:"linear-gradient(135deg,rgba(240,171,252,0.12),rgba(99,102,241,0.1))",borderColor:"rgba(240,171,252,0.35)",textAlign:"center"}} glow="#d946ef">
-              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:900,color:"#f0abfc",marginBottom:4}}>💎 DUKY HUNT</div>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:900,color:"#f0abfc",marginBottom:4,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><DI s={18}/> DUKY HUNT</div>
               <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.6}}>
                 Acumulează cât mai mult <b style={{color:"#f0abfc"}}>DUKY</b> înainte de airdrop!<br/>
                 Câștigă turnee zilnice → primești DUKY bonus direct în portofel.
@@ -1425,7 +1426,7 @@ export default function DuckFarm(){
                       <div style={{fontSize:13,flexShrink:0}}>{row.icon}</div>
                       <div style={{fontSize:10,fontWeight:700,color:row.color,width:68,flexShrink:0}}>{row.rank}</div>
                       <div style={{flex:1,display:"flex",gap:6,flexWrap:"wrap"}}>
-                        {row.duky>0&&<span style={{fontSize:9,color:"#f0abfc",fontWeight:700}}>💎{row.duky}</span>}
+                        {row.duky>0&&<span style={{fontSize:9,color:"#f0abfc",fontWeight:700,display:"inline-flex",alignItems:"center",gap:2}}><DI s={10}/>{row.duky}</span>}
                         {row.syr>0&&<span style={{fontSize:9,color:"#a78bfa"}}>💉×{row.syr}</span>}
                         {row.med>0&&<span style={{fontSize:9,color:"#4ade80"}}>💊×{row.med}</span>}
                         <span style={{fontSize:9,color:"#86efac"}}>{row.seedLabel}</span>
@@ -1544,7 +1545,7 @@ export default function DuckFarm(){
                       <div style={{fontSize:10,fontWeight:700,color:row.color,width:72,flexShrink:0}}>{row.rank}</div>
                       <div style={{flex:1,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                         {row.mythic&&<span style={{fontSize:9,color:"#f0abfc",fontWeight:700}}>🦆 Mythic Duck</span>}
-                        {row.duky>0&&<span style={{fontSize:9,color:"#f0abfc",fontWeight:700}}>💎{row.duky}</span>}
+                        {row.duky>0&&<span style={{fontSize:9,color:"#f0abfc",fontWeight:700,display:"inline-flex",alignItems:"center",gap:2}}><DI s={10}/>{row.duky}</span>}
                         {row.syr>0&&<span style={{fontSize:9,color:"#a78bfa"}}>💉×{row.syr}</span>}
                         {row.med>0&&<span style={{fontSize:9,color:"#4ade80"}}>💊×{row.med}</span>}
                         <span style={{fontSize:9,color:"#86efac"}}>{row.seedLabel}</span>
@@ -1594,7 +1595,7 @@ export default function DuckFarm(){
         {tab==="league"&&leagueSubTab==="profile"&&(
           <div style={S.col}>
             <div style={{display:"flex",gap:7}}>
-              {[["wallet","💎 Wallet"],["achievements","🏆 Medals"],["referral","🤝 Referral"],["social","📱 Social"]].map(([pt,lb])=>(
+              {[["wallet","$ Wallet"],["achievements","🏆 Medals"],["referral","🤝 Referral"],["social","📱 Social"]].map(([pt,lb])=>(
                 <button key={pt} style={{...S.subTab,...(profilTab===pt?S.subOn:{})}} onClick={()=>setProfilTab(pt)}>{lb}</button>
               ))}
             </div>
@@ -1603,7 +1604,7 @@ export default function DuckFarm(){
               <div style={S.col}>
                 <div style={{display:"flex",gap:8}}>
                   <G style={{flex:1,textAlign:"center"}} glow="#fbbf24"><div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:3,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}><img src="/coin.svg" alt="coin" style={{width:11,height:11}}/> COINS</div><div style={{fontSize:26,fontWeight:900,color:"#fbbf24",fontFamily:"'Orbitron',sans-serif"}}>{Math.floor(coins)}</div></G>
-                  <G style={{flex:1,textAlign:"center"}} glow="#f0abfc"><div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:3}}>💎 DUKY</div><div style={{fontSize:22,fontWeight:900,color:"#f0abfc",fontFamily:"'Orbitron',sans-serif"}}>{fD(duky)}</div></G>
+                  <G style={{flex:1,textAlign:"center"}} glow="#f0abfc"><div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:3,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}><img src="/duky.svg" alt="duky" style={{width:11,height:14}}/> DUKY</div><div style={{fontSize:22,fontWeight:900,color:"#f0abfc",fontFamily:"'Orbitron',sans-serif"}}>{fD(duky)}</div></G>
                 </div>
                 <G>
                   <SL>Statistics</SL>

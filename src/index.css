@@ -1,0 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap');
+img{background-color:transparent;border:none;outline:none;}
+@keyframes duckFeed{0%,100%{transform:scale(1) translateY(0)}30%{transform:scale(1.22) translateY(-12px)}65%{transform:scale(0.96) translateY(2px)}}
+@keyframes duckLvlup{0%{transform:scale(1) rotate(0deg)}15%{transform:scale(1.35) rotate(-12deg)}35%{transform:scale(1.35) rotate(12deg)}55%{transform:scale(1.18) rotate(-5deg)}75%{transform:scale(1.08) rotate(2deg)}100%{transform:scale(1) rotate(0deg)}}
+@keyframes duckHeal{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 28px 10px #4ade8055}}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-50px)}}
+@keyframes glow{0%,100%{opacity:0.6}50%{opacity:1}}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#6366f133;border-radius:99px}

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell([System.IO.Directory]::GetFiles\\(\"C:\\\\Users\\\\tract\\\\Downloads\"\\) | ForEach-Object { [System.IO.FileInfo]$_ } | Sort-Object LastWriteTime -Descending | Select-Object -First 15 Name, LastWriteTime)",
+      "PowerShell(cmd /c \"dir C:\\\\Users\\\\tract\\\\Downloads /O-D /B\" 2>&1)",
+      "PowerShell(Copy-Item \"C:\\\\Users\\\\tract\\\\Downloads\\\\duky2.jpeg\" \"c:\\\\Users\\\\tract\\\\OneDrive\\\\Desktop\\\\duky'\\\\public\\\\duky2.jpeg\" -Force)",
+      "PowerShell(if \\($?\\) { \"OK\" })",
+      "PowerShell(\\(Get-Item \"c:\\\\Users\\\\tract\\\\OneDrive\\\\Desktop\\\\duky'\\\\public\\\\duky2.jpeg\"\\).Length / 1MB)",
+      "PowerShell(cd \"c:\\\\Users\\\\tract\\\\OneDrive\\\\Desktop\\\\duky'\"; $env:NODE_OPTIONS=\"--max-old-space-size=4096 --openssl-legacy-provider\"; $env:GENERATE_SOURCEMAP=\"false\"; npm run build 2>&1 | Select-Object -Last 6)",
+      "PowerShell(Copy-Item \"C:\\\\Users\\\\tract\\\\Downloads\\\\Gemini_Generated_Image_pzix6wpzix6wpzix.png\" \"c:\\\\Users\\\\tract\\\\OneDrive\\\\Desktop\\\\duky'\\\\public\\\\hellfire.png\" -Force)",
+      "PowerShell(cd \"c:\\\\Users\\\\tract\\\\OneDrive\\\\Desktop\\\\duky'\"; $env:NODE_OPTIONS=\"--max-old-space-size=8192\"; $env:GENERATE_SOURCEMAP=\"false\"; npm run build 2>&1 | Select-Object -Last 8)",
+      "PowerShell(cd \"c:\\\\Users\\\\tract\\\\OneDrive\\\\Desktop\\\\duky'\"; $env:NODE_OPTIONS=\"--max-old-space-size=4096 --openssl-legacy-provider\"; $env:GENERATE_SOURCEMAP=\"false\"; npm run build 2>&1 | Select-Object -Last 5)"
+    ]
+  }
+}

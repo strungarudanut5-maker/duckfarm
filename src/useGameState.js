@@ -307,7 +307,7 @@ export function useGameState() {
     const seed = SEEDS.find(s => s.id === seedId);
     setWater(w => w - 1);
     setSeedInv(inv => ({ ...inv, [seedId]: inv[seedId] - 1 }));
-    setPlots(p => p.map((pl, i) => i === idx ? { sid: seedId, at: Date.now(), gt: seed.time * 1000, yld: seed.feed } : pl));
+    setPlots(p => p.map((pl, i) => i === idx ? { sid: seedId, at: Date.now(), gt: seed.time * 60 * 1000, yld: seed.feed } : pl));
     addFloat(`🌱 Planted!`, "#4ade80");
     progTask("plant");
   }, [plots, water, seedInv, addFloat, progTask]);

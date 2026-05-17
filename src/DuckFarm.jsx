@@ -61,6 +61,8 @@ export default function DuckFarm(){
   const [shopTab,     setShopTab]     = useState("store");
   const [leagueSubTab,setLeagueSubTab]= useState("daily");
   const [tutorialStep,setTutorialStep]= useState(()=>!localStorage.getItem("duky_tutorialDone")?1:0);
+  const [tabTutorial, setTabTutorial] = useState(null);
+  const seenTabsRef = useRef(new Set(JSON.parse(localStorage.getItem("duky_seenTabs")||"[]")));
   const [animMap,setAnimMap]=useState({});
   const prevLvlsRef=useRef({});
   const mineTimersRef=useRef({});
@@ -259,6 +261,51 @@ export default function DuckFarm(){
     {id:"shop",  icon:"🏪",label:"Shop"},
     {id:"league",icon:"🏆",label:"League"},
   ];
+
+  const TAB_TUTORIALS={
+    farm:{icon:"🌾",title:"Farm",tips:[
+      "Aici trăiesc rațele tale — hrănește-le cu 🌾 pentru XP și nivel.",
+      "Rațele produc ouă automat în funcție de raritate și nivel.",
+      "Plantează semințe 🌱 în plots pentru a genera hrană.",
+      "Trimite rațele de nivel 7 la mining ⛏️ pentru a câștiga DUKY.",
+      "Tab-ul DUKY îți permite să dai tap pentru ouă bonus.",
+    ]},
+    lab:{icon:"🧬",title:"Lab",tips:[
+      "Fă breeding între două rațe pentru a obține una mai rară.",
+      "Ai nevoie de seringi 💉 pentru fiecare procedură de breeding.",
+      "Cu cât rasa e mai rară, cu atât șansa de upgrade e mai mică.",
+      "O rață care face breeding nu produce ouă și nu poate mina.",
+      "Clinica vindecă rațele obosite cu Recovery Pills 💊.",
+    ]},
+    cook:{icon:"🍳",title:"Kitchen",tips:[
+      "Gătești rețete din ouă pentru a câștiga Coins 🪙.",
+      "Rețetele de tier mai mare consumă mai multe ouă dar dau mai multe coins.",
+      "Poți găti o singură rețetă odată — planifică cu grijă!",
+      "Tier 4 (Royal) are cele mai valoroase rețete din joc.",
+    ]},
+    shop:{icon:"🏪",title:"Shop",tips:[
+      "Cumpără seringi 💉, medicamente 💊 și semințe 🌱 cu Coins.",
+      "Deblochează sloturi noi pentru mai multe rațe.",
+      "Boosturile Premium dublează DUKY-ul din mining sau șansa la breeding.",
+      "Hatch Eggs îți permite să obții rațe rare direct, fără breeding.",
+      "Urmărește reclame gratuite pentru Coins și Seringi zilnice.",
+    ]},
+    league:{icon:"🏆",title:"League",tips:[
+      "Competițiile zilnice premiază cu seringi, medicamente și semințe.",
+      "Turneul săptămânal este marele eveniment — locul 1 primește o rată Mythic! 🦆",
+      "Scorul tău = ouăle produse în acea perioadă.",
+      "Cu cât rațele tale sunt mai rare și de nivel mai mare, cu atât scorul e mai mare.",
+    ]},
+  };
+
+  const handleTabChange = (id) => {
+    setTab(id);
+    if(!seenTabsRef.current.has(id)){
+      seenTabsRef.current.add(id);
+      localStorage.setItem("duky_seenTabs", JSON.stringify([...seenTabsRef.current]));
+      setTabTutorial(id);
+    }
+  };
 
 
   const renderLoginModal = () => {
@@ -625,6 +672,28 @@ export default function DuckFarm(){
       {/* Tutorial — prima deschidere */}
       {renderTutorial()}
 
+      {/* Tab tutorial overlay */}
+      {tabTutorial&&TAB_TUTORIALS[tabTutorial]&&(()=>{const t=TAB_TUTORIALS[tabTutorial];return(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:"rgba(10,10,28,0.98)",border:"1px solid rgba(99,102,241,0.4)",borderRadius:20,padding:"24px 20px",maxWidth:340,width:"100%",boxShadow:"0 0 40px rgba(99,102,241,0.25)"}}>
+            <div style={{textAlign:"center",marginBottom:16}}>
+              <div style={{fontSize:36,marginBottom:6}}>{t.icon}</div>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:16,fontWeight:900,color:"#a78bfa",letterSpacing:2}}>{t.title}</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
+              {t.tips.map((tip,i)=>(
+                <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                  <div style={{width:20,height:20,borderRadius:99,background:"rgba(99,102,241,0.2)",border:"1px solid rgba(99,102,241,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#a78bfa",flexShrink:0,marginTop:1}}>{i+1}</div>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,0.8)",lineHeight:1.5}}>{tip}</div>
+                </div>
+              ))}
+            </div>
+            <button style={{width:"100%",padding:"12px",background:"linear-gradient(135deg,#6366f1,#a78bfa)",border:"none",borderRadius:12,color:"#fff",fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:1}}
+              onClick={()=>setTabTutorial(null)}>Am înțeles! 👍</button>
+          </div>
+        </div>
+      );})()}
+
       {/* Login streak modal */}
       {renderLoginModal()}
 
@@ -661,7 +730,7 @@ export default function DuckFarm(){
       {/* Tabs */}
       <div style={S.tabs}>
         {TABS.map(t=>(
-          <button key={t.id} style={{...S.tab,...(tab===t.id?S.tabOn:{})}} onClick={()=>setTab(t.id)}>
+          <button key={t.id} style={{...S.tab,...(tab===t.id?S.tabOn:{})}} onClick={()=>handleTabChange(t.id)}>
             <div style={{fontSize:14,position:"relative",filter:tab===t.id?"drop-shadow(0 0 5px #a78bfa)":"none",transition:"filter .25s"}}>
               {t.icon}
               {t.id==="lab"&&tiredCount>0&&<span style={{position:"absolute",top:-5,right:-7,background:"#ef4444",color:"#fff",fontSize:7,borderRadius:99,padding:"1px 3px",fontWeight:700}}>{tiredCount}</span>}

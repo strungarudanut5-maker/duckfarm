@@ -816,6 +816,7 @@ export default function DuckFarm(){
                               <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",marginBottom:4}}>⭐ Lvl {duck.lvl} unlock cooldown</div>
                               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:700,color:"#fbbf24",letterSpacing:2}}>{fT(duck.lvlUpAt-Math.floor(now/1000))}</div>
                               <div style={{fontSize:8,color:"rgba(255,255,255,0.3)",marginTop:4}}>Producing eggs · Cannot breed</div>
+                              <button style={{...S.btn,width:"100%",marginTop:8,background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.35)",fontSize:11}} onClick={()=>skipCd(duck.id)}>⏩ Skip <CI s={11}/>{(lvlSkips+1)*10}</button>
                             </div>
                           )}
                           <div style={{display:"flex",gap:7,marginTop:10}}>

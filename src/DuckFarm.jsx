@@ -26,6 +26,7 @@ export default function DuckFarm(){
     achieved, claimAchievement, mineCount, setMineCount,
     cooking, setCooking, cookTimer, setCookTimer, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
     feedDuck, startBreeding, plantSeed, harvestPlot, sendMining, claimMining, buySlot, handleUseMed,
+    skipMining, skipBreeding, mineSkips, breedSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
     adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday,
     miningBoostUntil, setMiningBoostUntil,
@@ -813,6 +814,7 @@ export default function DuckFarm(){
                             {!duck.tired&&!mining&&!onCd&&duck.lvl<7&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#14532d,#4ade80)",opacity:feed>=gL(duck.lvl).fpf?1:0.4}} onClick={()=>{triggerAnim(duck.id,'feed');feedDuck(duck.id);}}>🌾 Feed ({gL(duck.lvl).fpf})</button>}
                             {duck.tired&&(meds.recovery>0)&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#7f1d1d,#ef4444)"}} onClick={()=>{triggerAnim(duck.id,'heal');handleUseMed(duck.id,"recovery");setSelDuck(null);}}>💊 Treat</button>}
                             {mDone&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#78350f,#fbbf24)"}} onClick={()=>claimMining(duck.id)}>🎁 Claim</button>}
+                            {mining&&!mDone&&<button style={{...S.actionBtn,flex:1,background:"rgba(251,191,36,0.15)",border:"1px solid rgba(251,191,36,0.4)",fontSize:10}} onClick={()=>skipMining(duck.id)}>⏩ Skip <CI s={10}/>{(mineSkips+1)*10}</button>}
                             {duck.lvl===7&&!duck.tired&&!mining&&miningCount<MAX_MINE&&breedSlot?.did!==duck.id&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#4c1d95,#f0abfc)"}} onClick={()=>{sendMining(duck.id);scheduleNotif(duck.id,duck.nickname||r.name,Date.now()+MINE_SECS*1000);setSelDuck(null);}}>⛏️ Mine</button>}
                             <button style={{...S.actionBtn,background:"rgba(99,102,241,0.2)",padding:"7px 10px"}} onClick={()=>{setNicknameFor(duck.id);setNickInput(duck.nickname||"");}}>✏️</button>
                           </div>
@@ -1001,6 +1003,7 @@ export default function DuckFarm(){
                     <div style={{color:gR(breedSlot.trid)?.color,fontSize:11,marginTop:2}}>Target: {gR(breedSlot.trid)?.name}</div>
                     <div style={{color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:700,margin:"5px 0"}}>⏱ {fT(Math.max(0,Math.ceil((breedSlot.endsAt-now)/1000)))}</div>
                     <PB pct={Math.min(100,((breedSlot.total*1000-(breedSlot.endsAt-now))/(breedSlot.total*1000))*100)} color={`linear-gradient(90deg,#7c3aed,${gR(breedSlot.trid)?.color})`} h={5}/>
+                    <button style={{...S.btn,marginTop:10,width:"100%",background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.35)",fontSize:11}} onClick={skipBreeding}>⏩ Skip <CI s={11}/>{(breedSkips+1)*10}</button>
                   </G>
                 )}
                 {breedRes&&!breedSlot&&(

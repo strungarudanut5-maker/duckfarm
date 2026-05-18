@@ -780,7 +780,7 @@ export default function DuckFarm(){
                           <div style={{textAlign:"center", marginBottom:10}}>
                             <div style={{fontWeight:700,color:r.color,fontSize:14}}>{duck.nickname||r.name}</div>
                             <div style={{fontSize:10,color:"rgba(255,255,255,0.3)"}}>Lvl {duck.lvl} · {r.name}</div>
-                            {isBreeding&&<div style={{marginTop:4,fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:1}}>🧬 BREEDING — {fT(breedSlot.timer)}</div>}
+                            {isBreeding&&<div style={{marginTop:4,fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:1}}>🧬 BREEDING — {fT(Math.max(0,Math.ceil((breedSlot.endsAt-now)/1000)))}</div>}
                           </div>
                           <div style={{display:"flex", justifyContent:"center"}}>
                             <Duck breedId={duck.bid} duckId={duck.id} size={190} tired={duck.tired} mining={!!mining} cooldown={!!onCd} lvl={duck.lvl} animType={animMap[duck.id]}/>
@@ -999,8 +999,8 @@ export default function DuckFarm(){
                     <div style={{fontSize:28}}>🧫</div>
                     <div style={{color:"#a78bfa",fontWeight:700,fontSize:12,marginTop:4}}>Incubating...</div>
                     <div style={{color:gR(breedSlot.trid)?.color,fontSize:11,marginTop:2}}>Target: {gR(breedSlot.trid)?.name}</div>
-                    <div style={{color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:700,margin:"5px 0"}}>⏱ {fT(breedSlot.timer)}</div>
-                    <PB pct={((breedSlot.total-breedSlot.timer)/breedSlot.total)*100} color={`linear-gradient(90deg,#7c3aed,${gR(breedSlot.trid)?.color})`} h={5}/>
+                    <div style={{color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:700,margin:"5px 0"}}>⏱ {fT(Math.max(0,Math.ceil((breedSlot.endsAt-now)/1000)))}</div>
+                    <PB pct={Math.min(100,((breedSlot.total*1000-(breedSlot.endsAt-now))/(breedSlot.total*1000))*100)} color={`linear-gradient(90deg,#7c3aed,${gR(breedSlot.trid)?.color})`} h={5}/>
                   </G>
                 )}
                 {breedRes&&!breedSlot&&(

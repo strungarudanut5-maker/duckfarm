@@ -297,7 +297,7 @@ export function useGameState() {
 
     setSyringes(s => s - nR.syrCost);
     setBreedRes(null);
-    setBreedSlot({ did: duck.id, rid: duck.rid, trid: nR.id, timer: nR.incub, total: nR.incub });
+    setBreedSlot({ did: duck.id, rid: duck.rid, trid: nR.id, endsAt: Date.now() + nR.incub * 1000, total: nR.incub });
     addFloat("💉 Procedure!", "#a78bfa");
     progTask("breed");
   }, [ducks, breedSlot, syringes, now, addFloat, progTask]);
@@ -384,11 +384,12 @@ export function useGameState() {
 
   useEffect(()=>{
     if(!breedSlot) return;
-    if(breedSlot.timer <= 0){
+    const remaining = breedSlot.endsAt - Date.now();
+    if(remaining <= 0){
       processBreedingResult();
       return;
     }
-    const t = setTimeout(() => setBreedSlot(b => b ? {...b, timer: b.timer - 1} : null), 1000);
+    const t = setTimeout(() => setBreedSlot(b => b ? {...b} : null), Math.min(remaining, 1000));
     return () => clearTimeout(t);
   }, [breedSlot]);
 

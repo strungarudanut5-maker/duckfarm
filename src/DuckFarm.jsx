@@ -26,7 +26,7 @@ export default function DuckFarm(){
     achieved, claimAchievement, mineCount, setMineCount,
     cooking, setCooking, cookTimer, setCookTimer, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
     feedDuck, startBreeding, plantSeed, harvestPlot, sendMining, claimMining, buySlot, handleUseMed,
-    skipMining, skipBreeding, mineSkips, breedSkips, lvlSkips, setLvlSkips,
+    skipMining, skipBreeding, skipBreedCd, mineSkips, breedSkips, breedCdSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
     adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday,
     miningBoostUntil, setMiningBoostUntil,
@@ -478,7 +478,10 @@ export default function DuckFarm(){
       <G><div style={{textAlign:"center",color:"#fbbf24",fontSize:12}}>⭐ Leveling up! {fT(duck.lvlUpAt-Math.floor(now/1000))}</div></G>
     );
     if (duck.breedCdUntil && duck.breedCdUntil > Math.floor(now/1000)) return (
-      <G><div style={{textAlign:"center",color:"#fbbf24",fontSize:12}}>⏳ Cooldown: {fT(duck.breedCdUntil-Math.floor(now/1000))}</div></G>
+      <G style={{textAlign:"center"}}>
+        <div style={{color:"#fbbf24",fontSize:12,marginBottom:8}}>⏳ Breed Cooldown: {fT(duck.breedCdUntil-Math.floor(now/1000))}</div>
+        <button style={{...S.btn,width:"100%",background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.35)",fontSize:11}} onClick={()=>skipBreedCd(duck.id)}>⏩ Skip <CI s={11}/>{(breedCdSkips+1)*10}</button>
+      </G>
     );
     const pct = r.breedChance * (breedBoost ? 2 : 1) * 100;
     const pc = pct>=50 ? "#4ade80" : pct>=10 ? "#fbbf24" : "#ef4444";

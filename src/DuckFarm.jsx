@@ -475,7 +475,10 @@ export default function DuckFarm(){
       <G><div style={{textAlign:"center",color:"#f0abfc",fontSize:12}}>⛏️ Mining! Please wait.</div></G>
     );
     if (duck.lvlUpAt && duck.lvlUpAt > Math.floor(now/1000)) return (
-      <G><div style={{textAlign:"center",color:"#fbbf24",fontSize:12}}>⭐ Leveling up! {fT(duck.lvlUpAt-Math.floor(now/1000))}</div></G>
+      <G style={{textAlign:"center"}}>
+        <div style={{color:"#fbbf24",fontSize:12,marginBottom:8}}>⭐ Lvl-up Cooldown: {fT(duck.lvlUpAt-Math.floor(now/1000))}</div>
+        <button style={{...S.btn,width:"100%",background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.35)",fontSize:11}} onClick={()=>skipCd(duck.id)}>⏩ Skip <CI s={11}/>{(lvlSkips+1)*10}</button>
+      </G>
     );
     if (duck.breedCdUntil && duck.breedCdUntil > Math.floor(now/1000)) return (
       <G style={{textAlign:"center"}}>

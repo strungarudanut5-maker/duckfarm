@@ -5,7 +5,7 @@ const DUCK_SKINS=['/hellfire.png','/gangster.png','/steampunk.png','/detective.p
 
 export function Duck({breedId,duckId,size=60,tired,mining,cooldown,lvl=1,animType,onClick}){
   const b=BREEDS.find(x=>x.id===breedId)||BREEDS[0];
-  const ov=tired?"💤":mining?"⛏️":cooldown?"⏳":null;
+  const ov=tired?"zz":mining?"...":cooldown?"cd":null;
   const num=duckId?parseInt(duckId.replace(/\D/g,''),10)||0:0;
   const skin=DUCK_SKINS[num%DUCK_SKINS.length];
   const evAnim=animType==='feed'?'duckFeed 0.55s ease-out'

@@ -42,7 +42,8 @@ export default function DuckFarm(){
   const[duckIdx,  setDuckIdx]  =useState(0);
   const[nicknameFor,setNicknameFor]=useState(null);
   const[nickInput,setNickInput]=useState("");
-  const[skipFor,  setSkipFor]  =useState(null); 
+  const[skipFor,  setSkipFor]  =useState(null);
+  const[lvlSkips, setLvlSkips]=useState(()=>Number(localStorage.getItem("duky_lvlSkips"))||0);
   const[refInput, setRefInput] =useState("");
   const[refApplied,setRefApplied]=useState(false);
   const sliderRef = useRef(null);
@@ -145,9 +146,11 @@ export default function DuckFarm(){
 
   const skipCd=duckId=>{
     const duck=ducks.find(d=>d.id===duckId);if(!duck)return;
-    const cost=gL(duck.lvl-1)?.skip||50;
-    if(coins<cost){addFloat(`Need ${cost}🪙`,"#ef4444");return;}
-    setCoins(c=>c-cost);setDucks(d=>d.map(dk=>dk.id===duckId?{...dk,lvlUpAt:null}:dk));
+    const cost=(lvlSkips+1)*10;
+    if(coins<cost){addFloat(`Need ${cost} coins!`,"#ef4444");return;}
+    setCoins(c=>c-cost);
+    setLvlSkips(n=>{const nv=n+1;localStorage.setItem("duky_lvlSkips",nv);return nv;});
+    setDucks(d=>d.map(dk=>dk.id===duckId?{...dk,lvlUpAt:null}:dk));
     addFloat("⏩ Skipped!","#4ade80");setSkipFor(null);
   };
 
@@ -439,7 +442,7 @@ export default function DuckFarm(){
     const duck = ducks.find(d => d.id === skipFor);
     if (!duck) return null;
     const rem = duck.lvlUpAt ? Math.max(0, duck.lvlUpAt - Math.floor(now/1000)) : 0;
-    const cost = gL(Math.max(duck.lvl - 1, 1))?.skip || 50;
+    const cost = (lvlSkips+1)*10;
     return (
       <div style={S.modalBg} onClick={() => setSkipFor(null)}>
         <div style={{position:"relative",top:"30%",width:280,margin:"auto"}} onClick={e => e.stopPropagation()}>

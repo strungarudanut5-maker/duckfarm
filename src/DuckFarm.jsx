@@ -668,10 +668,14 @@ export default function DuckFarm(){
   return(
     <div style={S.root}>
 
-      {/* Scanline */}
-      <div style={{position:"fixed",inset:0,background:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(99,102,241,0.012) 2px,rgba(99,102,241,0.012) 4px)",pointerEvents:"none",zIndex:1}}></div>
-      {/* Background depth glow */}
-      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse 90% 45% at 50% 0%,rgba(99,102,241,0.09) 0%,transparent 70%)",pointerEvents:"none",zIndex:0}}></div>
+      {/* Animated background orbs */}
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+        <div style={{position:"absolute",width:320,height:320,borderRadius:"50%",background:"radial-gradient(circle,rgba(124,58,237,0.22) 0%,transparent 70%)",top:"-80px",left:"-60px",animation:"orbFloat1 12s ease-in-out infinite"}}/>
+        <div style={{position:"absolute",width:280,height:280,borderRadius:"50%",background:"radial-gradient(circle,rgba(59,130,246,0.16) 0%,transparent 70%)",top:"30%",right:"-80px",animation:"orbFloat2 16s ease-in-out infinite"}}/>
+        <div style={{position:"absolute",width:240,height:240,borderRadius:"50%",background:"radial-gradient(circle,rgba(236,72,153,0.12) 0%,transparent 70%)",bottom:"15%",left:"-40px",animation:"orbFloat3 14s ease-in-out infinite"}}/>
+      </div>
+      {/* Subtle scanline */}
+      <div style={{position:"fixed",inset:0,background:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.008) 3px,rgba(255,255,255,0.008) 4px)",pointerEvents:"none",zIndex:1}}></div>
 
       {/* Floats */}
       <div style={S.floatWrap}>{floats.map(f=><div key={f.id} style={{...S.float,color:f.color}}>{f.text}</div>)}</div>

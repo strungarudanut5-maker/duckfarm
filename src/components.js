@@ -23,7 +23,7 @@ export function Duck({breedId,duckId,size=60,tired,mining,cooldown,lvl=1,animTyp
 }
 
 export const G=({children,style={},glow=""})=>(
-  <div style={{background:"rgba(10,10,28,0.97)",border:"1px solid rgba(99,102,241,0.18)",borderRadius:16,padding:"11px 13px",boxShadow:glow?`0 0 18px ${glow}22`:"none",...style}}>{children}</div>
+  <div style={{background:"rgba(255,255,255,0.04)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"13px 14px",boxShadow:glow?`0 0 24px ${glow}33, 0 4px 24px rgba(0,0,0,0.4)`:"0 4px 24px rgba(0,0,0,0.3)",...style}}>{children}</div>
 );
 export const B=({color,children,size=9})=>(
   <span style={{background:`${color}18`,color,border:`1px solid ${color}44`,borderRadius:5,padding:`1px ${Math.round(size/2)+1}px`,fontSize:size,fontWeight:700,whiteSpace:"nowrap"}}>{children}</span>

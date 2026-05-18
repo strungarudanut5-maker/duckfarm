@@ -24,7 +24,7 @@ export default function DuckFarm(){
     now, dailyTasks, setDailyTasks, taskClaimed, setTaskClaimed, tData, setTData, weeklyTData, setWeeklyTData,
     eps, mult, addFloat, floats, setFloats, progTask,
     achieved, claimAchievement, mineCount, setMineCount,
-    cooking, setCooking, cookTimer, setCookTimer, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
+    cooking, setCooking, cookTimer, cookEndsAt, setCookEndsAt, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
     feedDuck, startBreeding, plantSeed, harvestPlot, sendMining, claimMining, buySlot, handleUseMed,
     skipMining, skipBreeding, skipBreedCd, mineSkips, breedSkips, breedCdSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
@@ -1139,7 +1139,7 @@ export default function DuckFarm(){
                 <div style={{fontWeight:700,fontSize:14}}>{cooking.name}</div>
                 <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginBottom:4}}>→ <CI/> {cooking.coins} Coins</div>
                 <div style={{color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:700}}>{fT(cookTimer)}</div>
-                <PB pct={((cooking.time-cookTimer)/cooking.time)*100} color="linear-gradient(90deg,#ea580c,#fbbf24)" h={5}/>
+                <PB pct={Math.min(100,((cooking.time*1000-(cookEndsAt-now))/(cooking.time*1000))*100)} color="linear-gradient(90deg,#ea580c,#fbbf24)" h={5}/>
               </G>
             )}
             <div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:4}}>
@@ -1167,7 +1167,7 @@ export default function DuckFarm(){
                       <div style={{fontSize:10,color:tc,fontWeight:700}}><CI/> +{recipe.coins} Coins</div>
                     </div>
                     <button style={{...S.btn,background:can?`linear-gradient(135deg,#ea580c,${tc})`:"rgba(99,102,241,0.1)",opacity:can?1:0.4}}
-                      onClick={()=>{if(!can)return;setEggs(e=>e-recipe.eggs);setCooking(recipe);setCookTimer(recipe.time);addFloat(`-${recipe.eggs.toLocaleString()}🥚`,"#ef4444");}}>Cook</button>
+                      onClick={()=>{if(!can)return;setEggs(e=>e-recipe.eggs);setCooking(recipe);setCookEndsAt(Date.now()+recipe.time*1000);addFloat(`-${recipe.eggs.toLocaleString()}🥚`,"#ef4444");}}>Cook</button>
                   </div>
                 </G>
               );

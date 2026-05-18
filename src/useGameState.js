@@ -45,7 +45,14 @@ export function useGameState() {
   const[miningBoostUntil,setMiningBoostUntil]=useState(()=>Number(localStorage.getItem("duky_miningBoostUntil"))||0);
   // Timer-e și acțiuni (Noi)
   const[cooking,  setCooking]  =useState(()=>JSON.parse(localStorage.getItem("duky_cooking"))||null);
-  const[cookTimer,setCookTimer]=useState(()=>Number(localStorage.getItem("duky_cookTimer"))||0);
+  const[cookEndsAt,setCookEndsAt]=useState(()=>{
+    const saved=Number(localStorage.getItem("duky_cookEndsAt"))||0;
+    if(saved>0)return saved;
+    const oldTimer=Number(localStorage.getItem("duky_cookTimer"))||0;
+    const savedCooking=JSON.parse(localStorage.getItem("duky_cooking"));
+    if(savedCooking&&oldTimer>0)return Date.now()+oldTimer*1000;
+    return 0;
+  });
   const[breedSlot,setBreedSlot]=useState(()=>JSON.parse(localStorage.getItem("duky_breedSlot"))||null);
   const[breedRes, setBreedRes] =useState(null);
   const[breedBoost,setBreedBoost]=useState(false);
@@ -55,6 +62,7 @@ export function useGameState() {
   const[lvlSkips,    setLvlSkips]    =useState(()=>Number(localStorage.getItem("duky_lvlSkips"))||0);
 
   const[now,      setNow]      =useState(Date.now());
+  const cookTimer=Math.max(0,Math.ceil((cookEndsAt-now)/1000));
   const[dailyTasks,setDailyTasks]=useState(()=>getDailyTasks());
   const[pulse,    setPulse]    =useState(false);
   const[floats,   setFloats]   =useState([]);
@@ -152,7 +160,7 @@ export function useGameState() {
     localStorage.setItem("duky_mineCount", mineCount);
     localStorage.setItem("duky_tapsToday", tapsToday);
     localStorage.setItem("duky_cooking", JSON.stringify(cooking));
-    localStorage.setItem("duky_cookTimer", cookTimer);
+    localStorage.setItem("duky_cookEndsAt", cookEndsAt);
     localStorage.setItem("duky_breedSlot", JSON.stringify(breedSlot));
     localStorage.setItem("duky_adCoinsToday", adCoinsToday);
     localStorage.setItem("duky_adSyrToday", adSyrToday);
@@ -161,7 +169,7 @@ export function useGameState() {
     localStorage.setItem("duky_breedSkips", breedSkips);
     localStorage.setItem("duky_breedCdSkips", breedCdSkips);
     localStorage.setItem("duky_lvlSkips", lvlSkips);
-  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, cookTimer, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips]);
+  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, cookEndsAt, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips]);
 
   // Bucla de timp (1s)
   useEffect(()=>{const iv=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(iv);},[]);
@@ -407,16 +415,14 @@ export function useGameState() {
   // --- TIMERS LOGIC ---
   useEffect(() => {
     if (!cooking) return;
-    if (cookTimer <= 0) {
+    if (cookEndsAt <= now) {
       setCoins(c => +(c + cooking.coins).toFixed(2));
       addFloat(`+${cooking.coins} 🪙`, "#fbbf24");
       progTask("cook");
       setCooking(null);
-      return;
+      setCookEndsAt(0);
     }
-    const t = setTimeout(() => setCookTimer(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [cooking, cookTimer, addFloat, progTask]);
+  }, [now, cooking, cookEndsAt, addFloat, progTask]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(()=>{
     if(!breedSlot) return;
@@ -438,7 +444,7 @@ export function useGameState() {
     now, dailyTasks, setDailyTasks, taskClaimed, setTaskClaimed, tData, setTData, weeklyTData, setWeeklyTData,
     pulse, eps, mult, addFloat, floats, setFloats, progTask,
     achieved, claimAchievement, mineCount, setMineCount,
-    cooking, setCooking, cookTimer, setCookTimer, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
+    cooking, setCooking, cookTimer, cookEndsAt, setCookEndsAt, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
     feedDuck, startBreeding, plantSeed, harvestPlot, sendMining, claimMining, buySlot, handleUseMed,
     skipMining, skipBreeding, skipBreedCd, mineSkips, breedSkips, breedCdSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,

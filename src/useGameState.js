@@ -49,7 +49,9 @@ export function useGameState() {
   const[breedSlot,setBreedSlot]=useState(()=>JSON.parse(localStorage.getItem("duky_breedSlot"))||null);
   const[breedRes, setBreedRes] =useState(null);
   const[breedBoost,setBreedBoost]=useState(false);
-  const[skipCount, setSkipCount]=useState(()=>Number(localStorage.getItem("duky_skipCount"))||0);
+  const[mineSkips, setMineSkips] =useState(()=>Number(localStorage.getItem("duky_mineSkips"))||0);
+  const[breedSkips,setBreedSkips]=useState(()=>Number(localStorage.getItem("duky_breedSkips"))||0);
+  const[lvlSkips,  setLvlSkips]  =useState(()=>Number(localStorage.getItem("duky_lvlSkips"))||0);
 
   const[now,      setNow]      =useState(Date.now());
   const[dailyTasks,setDailyTasks]=useState(()=>getDailyTasks());
@@ -154,8 +156,10 @@ export function useGameState() {
     localStorage.setItem("duky_adCoinsToday", adCoinsToday);
     localStorage.setItem("duky_adSyrToday", adSyrToday);
     localStorage.setItem("duky_miningBoostUntil", miningBoostUntil);
-    localStorage.setItem("duky_skipCount", skipCount);
-  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, cookTimer, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, skipCount]);
+    localStorage.setItem("duky_mineSkips", mineSkips);
+    localStorage.setItem("duky_breedSkips", breedSkips);
+    localStorage.setItem("duky_lvlSkips", lvlSkips);
+  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, cookTimer, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, lvlSkips]);
 
   // Bucla de timp (1s)
   useEffect(()=>{const iv=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(iv);},[]);
@@ -349,23 +353,23 @@ export function useGameState() {
   }, [ducks, miningBoostUntil, addFloat, progTask, setMineCount]);
 
   const skipMining = useCallback((duckId) => {
-    const cost = (skipCount + 1) * 10;
+    const cost = (mineSkips + 1) * 10;
     if (coins < cost) { addFloat(`Need ${cost} coins!`, "#ef4444"); return; }
     setCoins(c => c - cost);
-    setSkipCount(n => n + 1);
+    setMineSkips(n => n + 1);
     setDucks(d => d.map(dk => dk.id === duckId ? { ...dk, miningUntil: Date.now() - 1 } : dk));
     addFloat(`⏩ Mining done!`, "#fbbf24");
-  }, [coins, skipCount, addFloat]);
+  }, [coins, mineSkips, addFloat]);
 
   const skipBreeding = useCallback(() => {
     if (!breedSlot) return;
-    const cost = (skipCount + 1) * 10;
+    const cost = (breedSkips + 1) * 10;
     if (coins < cost) { addFloat(`Need ${cost} coins!`, "#ef4444"); return; }
     setCoins(c => c - cost);
-    setSkipCount(n => n + 1);
+    setBreedSkips(n => n + 1);
     setBreedSlot(b => b ? { ...b, endsAt: Date.now() - 1 } : null);
     addFloat(`⏩ Breeding done!`, "#a78bfa");
-  }, [coins, skipCount, breedSlot, addFloat]);
+  }, [coins, breedSkips, breedSlot, addFloat]);
 
   const buySlot = useCallback(() => {
     if (slots >= 8) return;
@@ -425,7 +429,7 @@ export function useGameState() {
     achieved, claimAchievement, mineCount, setMineCount,
     cooking, setCooking, cookTimer, setCookTimer, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
     feedDuck, startBreeding, plantSeed, harvestPlot, sendMining, claimMining, buySlot, handleUseMed,
-    skipMining, skipBreeding, skipCount, setSkipCount,
+    skipMining, skipBreeding, mineSkips, breedSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
     adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday,
     miningBoostUntil, setMiningBoostUntil,

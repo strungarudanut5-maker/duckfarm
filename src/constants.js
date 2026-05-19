@@ -65,11 +65,11 @@ export const LVL_PASS_COST=100;
 export const gR=id=>RARITIES.find(r=>r.id===id);
 export const gNR=id=>{const i=RARITIES.findIndex(r=>r.id===id);return i>=0&&i<4?RARITIES[i+1]:null;};
 export const gL=lvl=>LVLS[Math.min(lvl-1,6)];
-// Levels beyond 7 require LVL_PASS. Each level needs more feed and produces more DUKY when mining.
+// Returns feed/xp requirements for leveling FROM lvl. lvl 7+ scales up exponentially.
 export const gLExtended=lvl=>{
-  if(lvl<=7)return LVLS[Math.min(lvl-1,6)];
-  const n=lvl-7;
-  return{l:lvl,xp:150,fpf:10+n*6,fph:Math.round(120*Math.pow(1.5,n)),skip:0};
+  if(lvl<7)return LVLS[lvl-1];
+  const n=lvl-6; // n=1 for lvl7, n=2 for lvl8, etc.
+  return{l:lvl,xp:150,fpf:4+n*6,fph:Math.round(120*Math.pow(1.5,n-1)),skip:0};
 };
 export const gLC=l=>["#94a3b8","#38bdf8","#4ade80","#fbbf24","#fb923c","#a78bfa","#f0abfc"][l-1]||"#fff";
 export const gBreed=rid=>({common:"mallard",rare:"golden",epic:"black",legendary:"royal",mythic:"cosmic"})[rid]||"mallard";

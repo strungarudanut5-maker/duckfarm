@@ -264,7 +264,7 @@ export function useGameState() {
       const rate=ducks.reduce((a,d)=>{
         if(d.miningUntil&&d.miningUntil>now)return a;
         if(breedSlot&&breedSlot.did===d.id)return a;
-        return a+(gL(d.lvl)?.fph||2)/360;
+        return a+(gLExtended(d.lvl)?.fph||2)/360;
       },0);
       if(rate>0)setFeed(f=>Math.max(0,+(f-rate).toFixed(3)));
     },10000);
@@ -275,7 +275,7 @@ export function useGameState() {
 
   const feedDuck = useCallback((duckId) => {
     const duck = ducks.find(d => d.id === duckId);
-    const maxLvl = lvlPass ? 99 : 7;
+    const maxLvl = 999;
     if (!duck || duck.lvl >= maxLvl || duck.tired) return;
     if (duck.lvlUpAt && duck.lvlUpAt > Math.floor(Date.now() / 1000)) {
       addFloat("Cooldown! ⏳", "#fbbf24");
@@ -304,7 +304,7 @@ export function useGameState() {
       progTask("feed");
       return { ...dk, xp: nx };
     }));
-  }, [ducks, feed, lvlPass, addFloat, progTask]);
+  }, [ducks, feed, addFloat, progTask]);
 
   const startBreeding = useCallback((duckId) => {
     const duck = ducks.find(d => d.id === duckId);

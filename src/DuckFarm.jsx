@@ -902,7 +902,7 @@ export default function DuckFarm(){
                     const cdSecsLeft=onCd?Math.max(0,duck.lvlUpAt-Math.floor(now/1000)):0;
                     const cdPct=onCd?Math.min(100,((CD_SECS-cdSecsLeft)/CD_SECS)*100):0;
                     const tiredSecsLeft=duck.tired&&duck.tiredUntil?Math.max(0,Math.ceil((duck.tiredUntil-now)/1000)):0;
-                    const canFeed=!duck.tired&&!mining&&!onCd&&(duck.lvl<7||(lvlPass&&duck.lvl>=7));
+                    const canFeed=!duck.tired&&!mining&&!onCd;
                     const lvlColor=gLC(Math.min(duck.lvl,7));
                     return (
                       <div key={duck.id} style={S.duckCard}>
@@ -1595,16 +1595,6 @@ export default function DuckFarm(){
             {UPGRADES.map(u=>(
               <G key={u.id} style={{opacity:upgrades[u.id]?0.5:1}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{flex:1}}><div style={{fontWeight:700,fontSize:12,color:"#4ade80"}}>{u.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>{u.desc}</div></div><button style={{...S.btn,opacity:!upgrades[u.id]&&coins>=u.cost?1:0.4}} onClick={()=>{if(upgrades[u.id]||coins<u.cost)return;setCoins(c=>c-u.cost);setUpgrades(p=>({...p,[u.id]:true}));addFloat("Activated!","#4ade80");}}>{upgrades[u.id]?"Done":<><CI/>{u.cost}</>}</button></div></G>
             ))}
-            <SL>Level Pass</SL>
-            <G style={{borderColor:lvlPass?"rgba(74,222,128,0.3)":"rgba(240,171,252,0.35)",background:lvlPass?"rgba(74,222,128,0.04)":"rgba(240,171,252,0.04)",opacity:lvlPass?0.6:1}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:12,color:"#f0abfc"}}>Lvl Pass — Infinite Levels</div>
-                  <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Unlock levels beyond 7 · More feed needed · +DUKY/mine per level</div>
-                </div>
-                <button style={{...S.btn,background:lvlPass?"rgba(255,255,255,0.1)":"linear-gradient(135deg,#7c3aed,#f0abfc)",opacity:lvlPass||coins>=LVL_PASS_COST?1:0.4}} onClick={buyLvlPass}>{lvlPass?"Owned":<><CI/>{LVL_PASS_COST}</>}</button>
-              </div>
-            </G>
             </div>
             )}
 

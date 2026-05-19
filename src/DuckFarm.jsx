@@ -897,51 +897,157 @@ export default function DuckFarm(){
                     const mDone=duck.miningUntil&&duck.miningUntil<=now;
                     const onCd=duck.lvlUpAt&&duck.lvlUpAt>Math.floor(now/1000);
                     const isBreeding=breedSlot&&breedSlot.did===duck.id;
+                    const mineSecsLeft=mining?Math.max(0,Math.ceil((duck.miningUntil-now)/1000)):0;
+                    const minePct=mining?Math.min(100,((MINE_SECS*1000-(duck.miningUntil-now))/(MINE_SECS*1000))*100):0;
+                    const cdSecsLeft=onCd?Math.max(0,duck.lvlUpAt-Math.floor(now/1000)):0;
+                    const cdPct=onCd?Math.min(100,((CD_SECS-cdSecsLeft)/CD_SECS)*100):0;
+                    const tiredSecsLeft=duck.tired&&duck.tiredUntil?Math.max(0,Math.ceil((duck.tiredUntil-now)/1000)):0;
+                    const canFeed=!duck.tired&&!mining&&!onCd&&(duck.lvl<7||(lvlPass&&duck.lvl>=7));
+                    const lvlColor=gLC(Math.min(duck.lvl,7));
                     return (
                       <div key={duck.id} style={S.duckCard}>
-                        <G style={{background:`linear-gradient(160deg,${r.color}1a,rgba(6,6,20,0.97))`,borderColor:`${r.color}35`,padding:"16px"}} glow={r.glow}>
-                          <div style={{textAlign:"center", marginBottom:10}}>
-                            <div style={{fontWeight:700,color:r.color,fontSize:14}}>{duck.nickname||r.name}</div>
-                            <div style={{fontSize:10,color:"rgba(255,255,255,0.3)"}}>Lvl {duck.lvl} · {r.name}</div>
-                            {isBreeding&&<div style={{marginTop:4,fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:1}}>BREEDING — {fT(Math.max(0,Math.ceil((breedSlot.endsAt-now)/1000)))}</div>}
+                        <div style={{background:`linear-gradient(170deg,${r.color}18,rgba(4,4,18,0.98))`,borderRadius:22,border:`1px solid ${r.color}40`,padding:"16px 14px",boxShadow:`0 0 30px ${r.glow}22`,position:"relative",overflow:"hidden"}}>
+                          {/* scanline overlay */}
+                          <div style={{position:"absolute",inset:0,background:"repeating-linear-gradient(0deg,transparent,transparent 22px,rgba(255,255,255,0.012) 22px,rgba(255,255,255,0.012) 23px)",pointerEvents:"none",borderRadius:22}}/>
+
+                          {/* ── TOP: name + badges ── */}
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                            <div>
+                              <div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:900,color:r.color,fontSize:15,letterSpacing:1,textShadow:`0 0 12px ${r.color}88`}}>{duck.nickname||r.name}</div>
+                              <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:1,marginTop:1}}>{r.name.toUpperCase()} CLASS</div>
+                            </div>
+                            <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                              <div style={{background:`${r.color}22`,border:`1px solid ${r.color}55`,borderRadius:8,padding:"3px 8px",fontSize:9,fontWeight:700,color:r.color,fontFamily:"'Orbitron',sans-serif"}}>LVL {duck.lvl}</div>
+                              {isBreeding&&<div style={{background:"rgba(167,139,250,0.2)",border:"1px solid rgba(167,139,250,0.5)",borderRadius:8,padding:"3px 7px",fontSize:8,fontWeight:700,color:"#a78bfa",animation:"hotGlow 1.5s infinite"}}>BREED</div>}
+                              {mining&&<div style={{background:"rgba(240,171,252,0.2)",border:"1px solid rgba(240,171,252,0.5)",borderRadius:8,padding:"3px 7px",fontSize:8,fontWeight:700,color:"#f0abfc",animation:"hotGlow 1.2s infinite"}}>MINING</div>}
+                              {duck.tired&&<div style={{background:"rgba(239,68,68,0.2)",border:"1px solid rgba(239,68,68,0.5)",borderRadius:8,padding:"3px 7px",fontSize:8,fontWeight:700,color:"#ef4444"}}>TIRED</div>}
+                              {onCd&&<div style={{background:"rgba(251,191,36,0.2)",border:"1px solid rgba(251,191,36,0.5)",borderRadius:8,padding:"3px 7px",fontSize:8,fontWeight:700,color:"#fbbf24"}}>CD</div>}
+                            </div>
                           </div>
-                          <div style={{display:"flex", justifyContent:"center"}}>
-                            <Duck breedId={duck.bid} duckId={duck.id} size={190} tired={duck.tired} mining={!!mining} cooldown={!!onCd} lvl={duck.lvl} animType={animMap[duck.id]}/>
+
+                          {/* ── DUCK IMAGE ── */}
+                          <div style={{display:"flex",justifyContent:"center",position:"relative",marginBottom:12}}>
+                            <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:170,height:170,borderRadius:"50%",background:`radial-gradient(circle,${r.color}18 0%,transparent 70%)`,pointerEvents:"none"}}/>
+                            <Duck breedId={duck.bid} duckId={duck.id} size={170} tired={duck.tired} mining={!!mining} cooldown={!!onCd} lvl={duck.lvl} animType={animMap[duck.id]}/>
                           </div>
-                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:10}}>
-                            {[["eggs/min",((r?.eggRate||0)*(duck.tired?0.4:1)*mult*60).toFixed(2)],["feed",gLExtended(duck.lvl).fpf||"—"],["$/lvl",fD(DUKY_R[duck.rid]||0.001)]].map(([l,v])=>(
-                              <div key={l} style={{background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"7px 5px",textAlign:"center"}}>
-                                <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>{l}</div>
-                                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700}}>{v}</div>
+
+                          {/* ── STATS ROW ── */}
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:12}}>
+                            {[
+                              {l:"eggs/min",v:((r?.eggRate||0)*(duck.tired?0.4:1)*mult*60).toFixed(2),c:"#fbbf24"},
+                              {l:"feed/lvl", v:gLExtended(duck.lvl).fpf||"MAX",c:"#4ade80"},
+                              {l:"DUKY/lvl", v:fD(DUKY_R[duck.rid]||0.001),c:"#f0abfc"},
+                            ].map(({l,v,c})=>(
+                              <div key={l} style={{background:"rgba(0,0,0,0.35)",borderRadius:11,padding:"8px 5px",textAlign:"center",border:`1px solid ${c}18`}}>
+                                <div style={{fontSize:8,color:"rgba(255,255,255,0.3)",letterSpacing:1,marginBottom:2}}>{l}</div>
+                                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:c}}>{v}</div>
                               </div>
                             ))}
                           </div>
-                          {(duck.lvl<7||(lvlPass&&duck.lvl>=7))&&!onCd&&(
-                            <div style={{width:"100%", marginTop:10}}>
-                              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:3}}>
-                                <span>XP  Lvl {duck.lvl} → {duck.lvl+1}</span>
-                                <span style={{color:gLC(Math.min(duck.lvl,7)),fontWeight:700}}>{duck.xp} / {gLExtended(duck.lvl).xp}</span>
+
+                          {/* ── XP BAR ── */}
+                          {canFeed&&(
+                            <div style={{marginBottom:12}}>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"rgba(255,255,255,0.3)",marginBottom:4}}>
+                                <span style={{letterSpacing:1}}>XP · LVL {duck.lvl} → {duck.lvl+1}</span>
+                                <span style={{color:lvlColor,fontWeight:700,fontFamily:"'Orbitron',sans-serif"}}>{duck.xp}/{gLExtended(duck.lvl).xp}</span>
                               </div>
-                              <PB pct={(duck.xp/gLExtended(duck.lvl).xp)*100} color={`linear-gradient(90deg,${gLC(Math.min(duck.lvl,7))},${gLC(Math.min(duck.lvl+1,7))})`} h={6}/>
+                              <div style={{height:6,borderRadius:99,background:"rgba(255,255,255,0.06)",overflow:"hidden"}}>
+                                <div style={{height:"100%",borderRadius:99,width:`${(duck.xp/gLExtended(duck.lvl).xp)*100}%`,background:`linear-gradient(90deg,${lvlColor}88,${lvlColor})`,transition:"width .4s",boxShadow:`0 0 8px ${lvlColor}66`}}/>
+                              </div>
                             </div>
                           )}
+
+                          {/* ── MINING TIMER ── */}
+                          {(mining||mDone)&&(
+                            <div style={{marginBottom:12,background:"rgba(240,171,252,0.06)",border:"1px solid rgba(240,171,252,0.2)",borderRadius:14,padding:"10px 12px"}}>
+                              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                                <div style={{fontSize:9,color:"#f0abfc",fontWeight:700,letterSpacing:2}}>MINING SESSION</div>
+                                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:16,fontWeight:900,color:mDone?"#fbbf24":"#f0abfc"}}>{mDone?"DONE!":fT(mineSecsLeft)}</div>
+                              </div>
+                              {!mDone&&<PB pct={minePct} color="linear-gradient(90deg,#7c3aed,#f0abfc)" h={5}/>}
+                              {mining&&!mDone&&<div style={{fontSize:8,color:"rgba(255,255,255,0.25)",marginTop:4,textAlign:"center"}}>{Math.round(minePct)}% complete · returns automatically</div>}
+                            </div>
+                          )}
+
+                          {/* ── BREED TIMER ── */}
+                          {isBreeding&&(
+                            <div style={{marginBottom:12,background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:14,padding:"10px 12px"}}>
+                              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                                <div style={{fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:2}}>BREEDING</div>
+                                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:16,fontWeight:900,color:"#a78bfa"}}>{fT(Math.max(0,Math.ceil((breedSlot.endsAt-now)/1000)))}</div>
+                              </div>
+                              <PB pct={Math.min(100,((breedSlot.total*1000-(breedSlot.endsAt-now))/(breedSlot.total*1000))*100)} color="linear-gradient(90deg,#4c1d95,#a78bfa)" h={5}/>
+                            </div>
+                          )}
+
+                          {/* ── COOLDOWN TIMER ── */}
                           {onCd&&(
-                            <div style={{marginTop:10,textAlign:"center",background:"rgba(251,191,36,0.07)",border:"1px solid rgba(251,191,36,0.18)",borderRadius:12,padding:"10px 8px"}}>
-                              <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",marginBottom:4}}>Lvl {duck.lvl} unlock cooldown</div>
-                              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:700,color:"#fbbf24",letterSpacing:2}}>{fT(duck.lvlUpAt-Math.floor(now/1000))}</div>
-                              <div style={{fontSize:8,color:"rgba(255,255,255,0.3)",marginTop:4}}>Producing eggs · Cannot breed</div>
-                              <button style={{...S.btn,width:"100%",marginTop:8,background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.35)",fontSize:11}} onClick={()=>skipCd(duck.id)}>Skip <CI s={11}/>{(lvlSkips+1)*10}</button>
+                            <div style={{marginBottom:12,background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:14,padding:"10px 12px"}}>
+                              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                                <div style={{fontSize:9,color:"#fbbf24",fontWeight:700,letterSpacing:2}}>LVL-UP COOLDOWN</div>
+                                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:16,fontWeight:900,color:"#fbbf24"}}>{fT(cdSecsLeft)}</div>
+                              </div>
+                              <PB pct={cdPct} color="linear-gradient(90deg,#78350f,#fbbf24)" h={5}/>
+                              <div style={{fontSize:8,color:"rgba(255,255,255,0.25)",marginTop:4,textAlign:"center"}}>Duck is leveling up · producing eggs</div>
                             </div>
                           )}
-                          <div style={{display:"flex",gap:7,marginTop:10}}>
-                            {!duck.tired&&!mining&&!onCd&&(duck.lvl<7||(lvlPass&&duck.lvl>=7))&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#14532d,#4ade80)",opacity:feed>=gLExtended(duck.lvl).fpf?1:0.4}} onClick={()=>{triggerAnim(duck.id,'feed');feedDuck(duck.id);}}>Feed ({gLExtended(duck.lvl).fpf})</button>}
-                            {duck.tired&&(meds.recovery>0)&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#7f1d1d,#ef4444)"}} onClick={()=>{triggerAnim(duck.id,'heal');handleUseMed(duck.id,"recovery");setSelDuck(null);}}>Treat</button>}
-                            {mDone&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#78350f,#fbbf24)"}} onClick={()=>claimMining(duck.id)}>Claim</button>}
-                            {mining&&!mDone&&<button style={{...S.actionBtn,flex:1,background:"rgba(251,191,36,0.15)",border:"1px solid rgba(251,191,36,0.4)",fontSize:10}} onClick={()=>skipMining(duck.id)}>Skip <CI s={10}/>{(mineSkips+1)*10}</button>}
-                            {duck.lvl>=7&&!duck.tired&&!mining&&miningCount<MAX_MINE&&breedSlot?.did!==duck.id&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#4c1d95,#f0abfc)"}} onClick={()=>{sendMining(duck.id);scheduleNotif(duck.id,duck.nickname||r.name,Date.now()+MINE_SECS*1000);setSelDuck(null);}}>Mine</button>}
-                            <button style={{...S.actionBtn,background:"rgba(99,102,241,0.2)",padding:"7px 10px"}} onClick={()=>{setNicknameFor(duck.id);setNickInput(duck.nickname||"");}}>Edit</button>
+
+                          {/* ── TIRED STATUS ── */}
+                          {duck.tired&&!mining&&(
+                            <div style={{marginBottom:12,background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:14,padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                              <div>
+                                <div style={{fontSize:9,color:"#ef4444",fontWeight:700,letterSpacing:2}}>TIRED · -60% eggs</div>
+                                {tiredSecsLeft>0&&<div style={{fontSize:8,color:"rgba(255,255,255,0.3)",marginTop:2}}>Auto-recovery in {fT(tiredSecsLeft)}</div>}
+                              </div>
+                              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:"#ef4444"}}>{tiredSecsLeft>0?fT(tiredSecsLeft):"—"}</div>
+                            </div>
+                          )}
+
+                          {/* ── ACTION BUTTONS ── */}
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                            {canFeed&&(
+                              <button style={{flex:1,minWidth:80,background:feed>=gLExtended(duck.lvl).fpf?"linear-gradient(135deg,#14532d,#4ade80)":"rgba(74,222,128,0.08)",border:`1px solid ${feed>=gLExtended(duck.lvl).fpf?"#4ade8055":"rgba(74,222,128,0.15)"}`,borderRadius:13,padding:"10px 8px",color:feed>=gLExtended(duck.lvl).fpf?"#fff":"rgba(74,222,128,0.4)",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif",boxShadow:feed>=gLExtended(duck.lvl).fpf?"0 2px 12px rgba(74,222,128,0.25)":"none",transition:"all .2s"}}
+                                onClick={()=>{triggerAnim(duck.id,'feed');feedDuck(duck.id);}}>
+                                Feed<br/><span style={{fontSize:9,opacity:0.8}}>{gLExtended(duck.lvl).fpf} 🌾</span>
+                              </button>
+                            )}
+                            {duck.lvl>=7&&!duck.tired&&!mining&&miningCount<MAX_MINE&&!isBreeding&&(
+                              <button style={{flex:1,minWidth:80,background:"linear-gradient(135deg,#4c1d95,#7c3aed)",border:"1px solid rgba(167,139,250,0.4)",borderRadius:13,padding:"10px 8px",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif",boxShadow:"0 2px 12px rgba(124,58,237,0.3)",transition:"all .2s"}}
+                                onClick={()=>{sendMining(duck.id);scheduleNotif(duck.id,duck.nickname||r.name,Date.now()+MINE_SECS*1000);}}>
+                                Mine<br/><span style={{fontSize:9,opacity:0.8}}>2h trip</span>
+                              </button>
+                            )}
+                            {mDone&&(
+                              <button style={{flex:1,minWidth:80,background:"linear-gradient(135deg,#78350f,#fbbf24)",border:"1px solid rgba(251,191,36,0.5)",borderRadius:13,padding:"10px 8px",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif",boxShadow:"0 2px 16px rgba(251,191,36,0.35)",animation:"winPulse 2s infinite"}}
+                                onClick={()=>claimMining(duck.id)}>
+                                Claim<br/><span style={{fontSize:9,opacity:0.8}}>DUKY ready</span>
+                              </button>
+                            )}
+                            {mining&&!mDone&&(
+                              <button style={{flex:1,minWidth:80,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",borderRadius:13,padding:"10px 8px",color:"#fbbf24",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif"}}
+                                onClick={()=>skipMining(duck.id)}>
+                                Skip<br/><span style={{fontSize:9,opacity:0.8}}><CI s={9}/>{(mineSkips+1)*10}</span>
+                              </button>
+                            )}
+                            {duck.tired&&meds.recovery>0&&(
+                              <button style={{flex:1,minWidth:80,background:"linear-gradient(135deg,#7f1d1d,#ef4444)",border:"1px solid rgba(239,68,68,0.4)",borderRadius:13,padding:"10px 8px",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif",boxShadow:"0 2px 12px rgba(239,68,68,0.25)"}}
+                                onClick={()=>{triggerAnim(duck.id,'heal');handleUseMed(duck.id,"recovery");}}>
+                                Treat<br/><span style={{fontSize:9,opacity:0.8}}>1 pill</span>
+                              </button>
+                            )}
+                            {onCd&&(
+                              <button style={{flex:1,minWidth:80,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",borderRadius:13,padding:"10px 8px",color:"#fbbf24",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif"}}
+                                onClick={()=>skipCd(duck.id)}>
+                                Skip CD<br/><span style={{fontSize:9,opacity:0.8}}><CI s={9}/>{(lvlSkips+1)*10}</span>
+                              </button>
+                            )}
+                            <button style={{background:"rgba(99,102,241,0.12)",border:"1px solid rgba(99,102,241,0.25)",borderRadius:13,padding:"10px 12px",color:"rgba(167,139,250,0.8)",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif"}}
+                              onClick={()=>{setNicknameFor(duck.id);setNickInput(duck.nickname||"");}}>
+                              ✏
+                            </button>
                           </div>
-                        </G>
+                        </div>
                       </div>
                     )
                   })}

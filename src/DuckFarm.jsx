@@ -104,6 +104,10 @@ export default function DuckFarm(){
   const[listFor,   setListFor]   =useState(null);
   const[listPrice, setListPrice] =useState(50);
   const[listHours, setListHours] =useState(4);
+  const[marketActivity,setMarketActivity]=useState([]);
+  const[aucFlash,  setAucFlash]  =useState({});
+  const[showList,  setShowList]  =useState(false);
+  const prevNowRef=useRef(now);
   const sliderRef = useRef(null);
   const touchStartX    = useRef(null);
   const mouseStartX    = useRef(null);
@@ -153,6 +157,23 @@ export default function DuckFarm(){
       setAuctions(prev=>prev.map(a=>a.id===auc.id?{...a,settled:true}:a));
     });
   },[now]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Detect NPC bids firing in real-time → activity feed + flash
+  useEffect(()=>{
+    const prev=prevNowRef.current;
+    auctions.filter(a=>!a.settled).forEach(auc=>{
+      const newBids=auc.npcBids.filter(b=>b.at>prev&&b.at<=now);
+      newBids.forEach(bid=>{
+        const rName=gR(auc.duckData.rid)?.name||"Duck";
+        const ev={id:Date.now()+Math.random(),text:`${bid.bidder} bid ${bid.amount} on ${rName} Lvl ${auc.duckData.lvl}`,color:gR(auc.duckData.rid)?.color||"#94a3b8"};
+        setMarketActivity(p=>[ev,...p].slice(0,12));
+        setAucFlash(f=>({...f,[auc.id]:Date.now()}));
+        setTimeout(()=>setAucFlash(f=>{const n={...f};delete n[auc.id];return n;}),800);
+      });
+    });
+    prevNowRef.current=now;
+  },[now]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [leagueSubTab,setLeagueSubTab]= useState("daily");
   const [tutorialStep,setTutorialStep]= useState(()=>!localStorage.getItem("duky_tutorialDone")?1:0);
   const [tabTutorial, setTabTutorial] = useState(null);
@@ -1481,13 +1502,51 @@ export default function DuckFarm(){
             </div>
             )}
 
-            {shopTab==="market"&&(
+            {shopTab==="market"&&(()=>{
+              const activeAucs=auctions.filter(a=>!a.settled);
+              const totalVol=activeAucs.reduce((s,a)=>s+getAucState(a,playerBids[a.id]||0,now).currentBid,0);
+              const myWinning=activeAucs.filter(a=>getAucState(a,playerBids[a.id]||0,now).isPlayerWinning).length;
+              const hotCount=activeAucs.filter(a=>a.npcBids.filter(b=>b.at<=now).length>=3).length;
+              return(
               <div style={S.col}>
-                {/* Header */}
-                <G style={{background:"linear-gradient(135deg,rgba(251,191,36,0.12),rgba(99,102,241,0.1))",borderColor:"rgba(251,191,36,0.4)"}}>
-                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:"#fbbf24",marginBottom:3}}>AUCTION HOUSE</div>
-                  <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Licitează rațe · Listează propriile rațe · Câștigătorul primește rața la final.</div>
-                </G>
+                {/* FUTURISTIC HEADER */}
+                <div style={{position:"relative",background:"linear-gradient(135deg,rgba(76,29,149,0.35),rgba(217,70,239,0.15))",borderRadius:20,padding:"16px 14px",border:"1px solid rgba(240,171,252,0.35)",boxShadow:"0 0 40px rgba(124,58,237,0.25)",overflow:"hidden"}}>
+                  <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"repeating-linear-gradient(0deg,transparent,transparent 18px,rgba(240,171,252,0.03) 18px,rgba(240,171,252,0.03) 19px)",pointerEvents:"none"}}/>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:17,fontWeight:900,color:"#f0abfc",letterSpacing:4,marginBottom:1}}>AUCTION HOUSE</div>
+                  <div style={{fontSize:9,color:"rgba(240,171,252,0.5)",letterSpacing:3,textTransform:"uppercase"}}>Live Duck Trading · Real-Time Bidding</div>
+                  <div style={{position:"absolute",top:10,right:12,width:8,height:8,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 8px #4ade80",animation:"hotGlow 1.5s ease-in-out infinite"}}/>
+                </div>
+
+                {/* LIVE STATS BAR */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
+                  {[
+                    {label:"Active",value:activeAucs.length,color:"#38bdf8",icon:"◈"},
+                    {label:"Volume",value:<><CI s={10}/>{totalVol}</>,color:"#fbbf24",icon:"◎"},
+                    {label:"Hot",value:hotCount,color:"#ef4444",icon:"◉"},
+                    {label:"Winning",value:myWinning,color:"#4ade80",icon:"◆"},
+                  ].map(({label,value,color,icon})=>(
+                    <div key={label} style={{background:"rgba(0,0,0,0.35)",border:`1px solid ${color}25`,borderRadius:14,padding:"9px 4px",textAlign:"center",boxShadow:`0 0 12px ${color}10`}}>
+                      <div style={{fontSize:12,color,animation:"hotGlow 2s ease-in-out infinite",marginBottom:1}}>{icon}</div>
+                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color,lineHeight:1}}>{value}</div>
+                      <div style={{fontSize:7,color:"rgba(255,255,255,0.3)",letterSpacing:1,textTransform:"uppercase",marginTop:2}}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ACTIVITY TICKER */}
+                {marketActivity.length>0&&(
+                  <div style={{background:"rgba(0,0,0,0.5)",borderRadius:14,padding:"8px 11px",border:"1px solid rgba(99,102,241,0.2)"}}>
+                    <div style={{fontSize:7,color:"rgba(99,102,241,0.7)",letterSpacing:2,textTransform:"uppercase",marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
+                      <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:"#4ade80",animation:"hotGlow 1s infinite"}}/>
+                      LIVE FEED
+                    </div>
+                    {marketActivity.slice(0,5).map((ev,i)=>(
+                      <div key={ev.id} style={{fontSize:9,color:i===0?ev.color:"rgba(255,255,255,0.35)",fontWeight:i===0?700:400,lineHeight:1.7,animation:i===0?"tickerIn 0.3s ease-out":"none",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                        {i===0?"▶":"·"} {ev.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* List my duck for auction */}
                 <SL>List your duck</SL>
@@ -1563,88 +1622,164 @@ export default function DuckFarm(){
                     </div>
                 )}
 
-                {/* Active auctions */}
-                <SL>Active auctions ({auctions.filter(a=>!a.settled).length})</SL>
-                {auctions.filter(a=>!a.settled).length===0&&(
-                  <G><div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.35)"}}>No active auctions.</div></G>
+                {/* ── ACTIVE AUCTIONS ── */}
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:4}}>
+                  <div style={{fontSize:9,fontWeight:700,color:"rgba(99,102,241,0.6)",letterSpacing:2,textTransform:"uppercase"}}>Live Auctions ({activeAucs.length})</div>
+                  {activeAucs.length===0&&<button style={{...S.btn,fontSize:9,padding:"4px 9px"}} onClick={()=>{setAuctions(genNPCAuctions());setPlayerBids({});}}>Generate New</button>}
+                </div>
+
+                {activeAucs.length===0&&(
+                  <div style={{textAlign:"center",padding:"20px 0",color:"rgba(255,255,255,0.2)",fontSize:11}}>No active auctions right now.</div>
                 )}
-                {auctions.filter(a=>!a.settled).map(auc=>{
+
+                {activeAucs.map(auc=>{
                   const r=gR(auc.duckData.rid);
                   const pb=playerBids[auc.id]||0;
                   const st=getAucState(auc,pb,now);
                   const timeLeft=Math.max(0,Math.ceil((auc.endsAt-now)/1000));
                   const ended=timeLeft===0;
+                  const urgent=!ended&&timeLeft<300;
+                  const isHot=auc.npcBids.filter(b=>b.at<=now).length>=3;
                   const minBid=st.currentBid+Math.max(1,Math.round(st.currentBid*0.05));
                   const curInput=bidInputs[auc.id]!==undefined?bidInputs[auc.id]:minBid;
                   const canAfford=coins>=curInput&&curInput>st.currentBid;
                   const hasSlot=ducks.length<slots;
+                  const firedBids=auc.npcBids.filter(b=>b.at<=now).sort((a,b)=>a.at-b.at);
+                  const pricePct=auc.startPrice>0?Math.min(100,((st.currentBid-auc.startPrice)/Math.max(auc.startPrice,1))*100):0;
+                  const isFlashing=!!aucFlash[auc.id];
+                  const borderCol=st.isPlayerWinning?"#4ade80":urgent?"#ef4444":r.color;
                   return(
-                    <G key={auc.id} style={{borderColor:st.isPlayerWinning?"rgba(74,222,128,0.4)":ended?"rgba(99,102,241,0.2)":`${r.color}22`}}>
-                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                        <Duck breedId={auc.duckData.bid} duckId={auc.id} size={46} lvl={auc.duckData.lvl}/>
-                        <div style={{flex:1}}>
-                          <div style={{fontWeight:700,fontSize:12,color:r.color}}>{r.name} · Lvl {auc.duckData.lvl}</div>
-                          <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>by {auc.seller}</div>
-                          <div style={{marginTop:3,display:"flex",alignItems:"center",gap:8}}>
-                            <span style={{fontSize:10,fontFamily:"'Orbitron',sans-serif",color:st.isPlayerWinning?"#4ade80":st.leader?"#ef4444":"rgba(255,255,255,0.5)",fontWeight:700}}>
-                              <CI s={10}/>{st.currentBid}
-                            </span>
-                            <span style={{fontSize:9,color:st.isPlayerWinning?"#4ade80":st.leader?"#ef4444":"rgba(255,255,255,0.4)"}}>
-                              {st.isPlayerWinning?"You're winning!":st.leader?`${st.leader} is leading`:"No bids yet"}
-                            </span>
+                    <div key={auc.id} style={{
+                      background:"rgba(0,0,0,0.45)",
+                      borderRadius:18,
+                      border:`1px solid ${borderCol}${st.isPlayerWinning?"88":urgent?"66":"33"}`,
+                      padding:"12px",
+                      boxShadow:st.isPlayerWinning?"0 0 20px rgba(74,222,128,0.15)":urgent?"0 0 16px rgba(239,68,68,0.15)":`0 0 12px ${r.color}08`,
+                      animation:st.isPlayerWinning?"winPulse 2s ease-in-out infinite":urgent?"aucPulse 1s ease-in-out infinite":"none",
+                      transition:"border-color .3s",
+                      position:"relative",overflow:"hidden",
+                    }}>
+                      {isFlashing&&<div style={{position:"absolute",inset:0,borderRadius:18,animation:"bidFlash 0.8s ease-out forwards",pointerEvents:"none"}}/>}
+
+                      {/* TOP ROW */}
+                      <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
+                        <div style={{position:"relative",flexShrink:0}}>
+                          <Duck breedId={auc.duckData.bid} duckId={auc.id} size={52} lvl={auc.duckData.lvl}/>
+                          {isHot&&<div style={{position:"absolute",top:-4,left:-4,background:"#ef4444",borderRadius:99,fontSize:7,fontWeight:700,color:"#fff",padding:"2px 5px",animation:"hotGlow 1s infinite"}}>HOT</div>}
+                          {auc.isPlayer&&<div style={{position:"absolute",bottom:-4,left:"50%",transform:"translateX(-50%)",background:"#a78bfa",borderRadius:99,fontSize:7,fontWeight:700,color:"#fff",padding:"1px 5px",whiteSpace:"nowrap"}}>MINE</div>}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:1}}>
+                            <span style={{fontWeight:700,fontSize:12,color:r.color}}>{r.name}</span>
+                            <B color={r.color} size={8}>Lvl {auc.duckData.lvl}</B>
+                          </div>
+                          <div style={{fontSize:8,color:"rgba(255,255,255,0.3)",marginBottom:6}}>Listed by {auc.seller}</div>
+                          {/* PRICE DISPLAY */}
+                          <div style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:"7px 10px"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                              <div>
+                                <div style={{fontSize:8,color:"rgba(255,255,255,0.35)",letterSpacing:1}}>CURRENT BID</div>
+                                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:16,fontWeight:900,color:st.isPlayerWinning?"#4ade80":st.leader?"#fb923c":"#e2e8f0",display:"flex",alignItems:"center",gap:3}}>
+                                  <CI s={13}/>{st.currentBid}
+                                </div>
+                              </div>
+                              <div style={{textAlign:"right"}}>
+                                <div style={{fontSize:8,color:"rgba(255,255,255,0.35)",letterSpacing:1}}>{ended?"ENDED":"ENDS IN"}</div>
+                                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:ended?"#ef4444":urgent?"#ef4444":"#fbbf24"}}>{ended?"ENDED":fT(timeLeft)}</div>
+                              </div>
+                            </div>
+                            {/* Price progress bar */}
+                            <div style={{height:3,borderRadius:99,background:"rgba(255,255,255,0.06)",marginBottom:4}}>
+                              <div style={{height:"100%",borderRadius:99,width:`${Math.min(pricePct+5,100)}%`,background:`linear-gradient(90deg,${r.color}88,${r.color})`,transition:"width 1s"}}/>
+                            </div>
+                            {/* Leader */}
+                            <div style={{fontSize:9,fontWeight:700,color:st.isPlayerWinning?"#4ade80":st.leader?"#fb923c":"rgba(255,255,255,0.3)"}}>
+                              {st.isPlayerWinning?"▲ You are winning!":st.leader?`▲ ${st.leader} is leading`:"No bids yet — be the first!"}
+                            </div>
                           </div>
                         </div>
-                        <div style={{textAlign:"right",flexShrink:0}}>
-                          <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Ends in</div>
-                          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:700,color:ended?"#ef4444":timeLeft<300?"#fb923c":"#fbbf24"}}>{ended?"ENDED":fT(timeLeft)}</div>
-                        </div>
                       </div>
-                      {!ended&&!auc.isPlayer&&(
-                        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                          <input type="number" min={minBid} value={curInput}
-                            onChange={e=>setBidInputs(b=>({...b,[auc.id]:Number(e.target.value)}))}
-                            style={{flex:1,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"6px 8px",color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:700}}/>
-                          <button style={{...S.btn,background:canAfford&&hasSlot?"linear-gradient(135deg,#166534,#4ade80)":"rgba(99,102,241,0.1)",opacity:canAfford&&hasSlot?1:0.4,padding:"7px 12px"}}
-                            onClick={()=>{
-                              if(!canAfford||!hasSlot)return;
-                              if(curInput<=st.currentBid){addFloat("Bid too low!","#ef4444");return;}
-                              setPlayerBids(b=>({...b,[auc.id]:curInput}));
-                              addFloat(`Bid placed: ${curInput} Coins`,"#4ade80");
-                            }}>Bid</button>
+
+                      {/* BID HISTORY MINI */}
+                      {firedBids.length>0&&(
+                        <div style={{display:"flex",gap:4,marginBottom:8,alignItems:"center"}}>
+                          <div style={{fontSize:8,color:"rgba(255,255,255,0.25)",flexShrink:0}}>History:</div>
+                          <div style={{display:"flex",gap:3,overflow:"hidden",flex:1}}>
+                            {firedBids.slice(-5).map((b,i)=>(
+                              <div key={i} style={{background:`${r.color}18`,border:`1px solid ${r.color}33`,borderRadius:6,padding:"2px 5px",fontSize:8,color:r.color,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>
+                                {b.amount}
+                              </div>
+                            ))}
+                            {pb>0&&<div style={{background:"rgba(74,222,128,0.18)",border:"1px solid rgba(74,222,128,0.4)",borderRadius:6,padding:"2px 5px",fontSize:8,color:"#4ade80",fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>You:{pb}</div>}
+                          </div>
                         </div>
                       )}
-                      {!ended&&!auc.isPlayer&&!hasSlot&&<div style={{fontSize:9,color:"#ef4444",marginTop:4,textAlign:"center"}}>No duck slots — buy one first</div>}
-                      {auc.isPlayer&&!ended&&<div style={{fontSize:9,color:"#a78bfa",marginTop:4,textAlign:"center"}}>Your listing · Waiting for bids…</div>}
-                      {ended&&<div style={{fontSize:9,color:"rgba(255,255,255,0.3)",marginTop:4,textAlign:"center"}}>Auction ended — will settle shortly</div>}
-                    </G>
+
+                      {/* BID CONTROLS */}
+                      {!ended&&!auc.isPlayer&&(
+                        <>
+                          <div style={{display:"flex",gap:4,marginBottom:6}}>
+                            {[1.1,1.25,1.5].map((mult,i)=>{
+                              const v=Math.round(st.currentBid*mult);
+                              return(
+                                <button key={i} style={{flex:1,background:`${r.color}15`,border:`1px solid ${r.color}33`,borderRadius:8,padding:"4px 0",color:r.color,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"'Exo 2',sans-serif"}}
+                                  onClick={()=>setBidInputs(b=>({...b,[auc.id]:v}))}>
+                                  +{Math.round((mult-1)*100)}%<br/><span style={{fontSize:8,opacity:0.7}}>{v}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div style={{display:"flex",gap:6}}>
+                            <input type="number" min={minBid} value={curInput}
+                              onChange={e=>setBidInputs(b=>({...b,[auc.id]:Math.max(minBid,Number(e.target.value))}))}
+                              style={{flex:1,background:"rgba(255,255,255,0.06)",border:`1px solid ${r.color}44`,borderRadius:10,padding:"8px 10px",color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,outline:"none"}}/>
+                            <button style={{...S.btn,padding:"8px 16px",background:canAfford&&hasSlot?`linear-gradient(135deg,#166534,#4ade80)`:"rgba(99,102,241,0.1)",opacity:canAfford&&hasSlot?1:0.4,fontSize:12}}
+                              onClick={()=>{
+                                if(!canAfford||!hasSlot){addFloat(!hasSlot?"No slot!":"Not enough coins!","#ef4444");return;}
+                                if(curInput<=st.currentBid){addFloat("Bid too low!","#ef4444");return;}
+                                setPlayerBids(b=>({...b,[auc.id]:curInput}));
+                                addFloat(`Bid: ${curInput} Coins`,"#4ade80");
+                              }}>BID</button>
+                          </div>
+                          {!hasSlot&&<div style={{fontSize:9,color:"#ef4444",marginTop:4,textAlign:"center"}}>Need a duck slot first</div>}
+                        </>
+                      )}
+                      {auc.isPlayer&&!ended&&(
+                        <div style={{textAlign:"center",padding:"6px",background:"rgba(167,139,250,0.08)",borderRadius:10,border:"1px solid rgba(167,139,250,0.2)",fontSize:10,color:"#a78bfa"}}>
+                          Your listing · {firedBids.length} bid(s) so far
+                        </div>
+                      )}
+                      {ended&&<div style={{textAlign:"center",fontSize:9,color:"rgba(255,255,255,0.25)",padding:"4px 0"}}>Settling…</div>}
+                    </div>
                   );
                 })}
-                {/* Settled auctions */}
+
+                {/* ── SETTLED HISTORY ── */}
                 {auctions.filter(a=>a.settled).length>0&&(
-                  <>
-                    <SL>Ended auctions</SL>
-                    {auctions.filter(a=>a.settled).slice(-5).map(auc=>{
+                  <div style={{marginTop:4}}>
+                    <div style={{fontSize:9,fontWeight:700,color:"rgba(99,102,241,0.5)",letterSpacing:2,textTransform:"uppercase",marginBottom:6}}>Recent Results</div>
+                    {auctions.filter(a=>a.settled).slice(-4).reverse().map(auc=>{
                       const r=gR(auc.duckData.rid);
                       const pb=playerBids[auc.id]||0;
                       const st=getAucState(auc,pb,auc.endsAt);
                       return(
-                        <G key={auc.id} style={{opacity:0.5}}>
-                          <div style={{display:"flex",alignItems:"center",gap:10}}>
-                            <Duck breedId={auc.duckData.bid} duckId={auc.id} size={38} lvl={auc.duckData.lvl}/>
-                            <div style={{flex:1}}>
-                              <div style={{fontWeight:700,fontSize:11,color:r.color}}>{r.name} Lvl {auc.duckData.lvl}</div>
-                              <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Final: <CI s={9}/>{st.currentBid} · {st.leader||"No winner"}</div>
-                            </div>
-                            <B color={st.isPlayerWinning?"#4ade80":"#94a3b8"} size={9}>{st.isPlayerWinning?"Won":"Lost"}</B>
+                        <div key={auc.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:12,background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",marginBottom:5}}>
+                          <Duck breedId={auc.duckData.bid} duckId={auc.id} size={34} lvl={auc.duckData.lvl}/>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:10,fontWeight:700,color:r.color}}>{r.name} Lvl {auc.duckData.lvl}</div>
+                            <div style={{fontSize:8,color:"rgba(255,255,255,0.3)"}}>Final: {st.currentBid} · {st.leader||"No bids"}</div>
                           </div>
-                        </G>
+                          <B color={st.isPlayerWinning?"#4ade80":pb>0?"#ef4444":"#94a3b8"} size={8}>
+                            {st.isPlayerWinning?"WON":pb>0?"LOST":"—"}
+                          </B>
+                        </div>
                       );
                     })}
-                    <button style={{...S.btn,width:"100%",background:"rgba(99,102,241,0.1)",fontSize:10}} onClick={()=>{setAuctions(genNPCAuctions());setPlayerBids({});}}>New Auctions</button>
-                  </>
+                    <button style={{...S.btn,width:"100%",background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.2)",fontSize:10,marginTop:4}} onClick={()=>{setAuctions(genNPCAuctions());setPlayerBids({});}}>New Auction Round</button>
+                  </div>
                 )}
               </div>
-            )}
+            );})()}
           </div>
         )}
 

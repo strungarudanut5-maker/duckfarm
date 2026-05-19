@@ -3,8 +3,8 @@ import './index.css';
 import {
   BREEDS, RARITIES, DUKY_R, SEEDS, TIER_COLORS, RECIPES, MEDS, UPGRADES,
   SLOT_COSTS, SYR_COST, MAX_TAPS, MAX_WATER, MAX_ADS, MAX_MINE, MINE_SECS, CD_SECS,
-  gR, gNR, gL, gLC, gBreed, fD, fT, GEN_OPP, GEN_WEEKLY_OPP, TREWARD, WEEKLY_TREWARD, ACHIEVEMENTS_TPL, STREAK_REWARDS, PRIZE_TABLE, WEEKLY_PRIZE_TABLE,
-  COIN_PACKS, HATCH_EGGS, MAX_AD_COINS, MAX_AD_SYR
+  gR, gNR, gL, gLExtended, gLC, gBreed, fD, fT, GEN_OPP, GEN_WEEKLY_OPP, TREWARD, WEEKLY_TREWARD, ACHIEVEMENTS_TPL, STREAK_REWARDS, PRIZE_TABLE, WEEKLY_PRIZE_TABLE,
+  COIN_PACKS, HATCH_EGGS, MAX_AD_COINS, MAX_AD_SYR, LVL_PASS_COST
 } from './constants';
 import { S } from './styles';
 import { Duck, G, B, PB, SL, Row } from './components';
@@ -12,6 +12,25 @@ import { useGameState } from './useGameState';
 
 const CI=({s=13})=><img src="/coin.svg" alt="coin" style={{width:s,height:s,verticalAlign:"middle",display:"inline-block",marginBottom:1}}/>;
 const DI=({s=13})=><img src="/duky.svg" alt="duky" style={{width:s,height:Math.round(s*1.25),verticalAlign:"middle",display:"inline-block",marginBottom:1}}/>;
+
+const SELL_BASE={common:30,rare:150,epic:600,legendary:2500,mythic:8000};
+const getDuckSellValue=duck=>Math.round((SELL_BASE[duck.rid]||30)*(0.5+duck.lvl*0.15));
+
+const NPC_SELLERS=["QuackMaster","FarmKing","EggLord","DuckBoss","AlphaDuck","MythBreeder","GodFarmer","DuckPro99","LegendFarm","CryptoQuack"];
+function genNPCMarket(){
+  const pool=[
+    {rid:"common",bid:"mallard",lvl:2},{rid:"common",bid:"arctic",lvl:4},{rid:"common",bid:"volcanic",lvl:6},
+    {rid:"rare",bid:"golden",lvl:1},{rid:"rare",bid:"mandarin",lvl:3},{rid:"rare",bid:"golden",lvl:5},
+    {rid:"epic",bid:"black",lvl:1},{rid:"epic",bid:"black",lvl:4},
+    {rid:"legendary",bid:"royal",lvl:1},{rid:"legendary",bid:"cosmic",lvl:2},
+    {rid:"common",bid:"mallard",lvl:3},{rid:"rare",bid:"golden",lvl:2},
+  ];
+  return pool.map((d,i)=>{
+    const base=SELL_BASE[d.rid]||30;
+    const price=Math.round(base*(0.7+d.lvl*0.18)*(0.9+Math.random()*0.2));
+    return{id:"npc"+i,duckData:{...d,nickname:"",tired:false,xp:0},price,seller:NPC_SELLERS[i%NPC_SELLERS.length],isNPC:true};
+  });
+}
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 export default function DuckFarm(){
@@ -30,6 +49,8 @@ export default function DuckFarm(){
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
     adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday,
     miningBoostUntil, setMiningBoostUntil,
+    completionBonusClaimed, setCompletionBonusClaimed,
+    lvlPass, buyLvlPass,
   } = useGameState();
 
   const[selSeed,  setSelSeed]  =useState(null);
@@ -45,6 +66,12 @@ export default function DuckFarm(){
   const[skipFor,  setSkipFor]  =useState(null);
   const[refInput, setRefInput] =useState("");
   const[refApplied,setRefApplied]=useState(false);
+  const[sellFor,  setSellFor]  =useState(null); // duckId to confirm sell
+  const[market,   setMarket]   =useState(()=>{
+    const saved=localStorage.getItem("duky_market");
+    if(saved){try{return JSON.parse(saved);}catch(e){}}
+    return genNPCMarket();
+  });
   const sliderRef = useRef(null);
   const touchStartX    = useRef(null);
   const mouseStartX    = useRef(null);
@@ -61,6 +88,8 @@ export default function DuckFarm(){
   const [adCountdown, setAdCountdown] = useState(5);
   const [labTab,      setLabTab]      = useState("breed");
   const [shopTab,     setShopTab]     = useState("store");
+  // persist market listings
+  useEffect(()=>{localStorage.setItem("duky_market",JSON.stringify(market));},[market]);
   const [leagueSubTab,setLeagueSubTab]= useState("daily");
   const [tutorialStep,setTutorialStep]= useState(()=>!localStorage.getItem("duky_tutorialDone")?1:0);
   const [tabTutorial, setTabTutorial] = useState(null);
@@ -796,20 +825,20 @@ export default function DuckFarm(){
                             <Duck breedId={duck.bid} duckId={duck.id} size={190} tired={duck.tired} mining={!!mining} cooldown={!!onCd} lvl={duck.lvl} animType={animMap[duck.id]}/>
                           </div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:10}}>
-                            {[["eggs/min",((r?.eggRate||0)*(duck.tired?0.4:1)*mult*60).toFixed(2)],["feed",gL(duck.lvl).fpf||"—"],["$/lvl",fD(DUKY_R[duck.rid]||0.001)]].map(([l,v])=>(
+                            {[["eggs/min",((r?.eggRate||0)*(duck.tired?0.4:1)*mult*60).toFixed(2)],["feed",gLExtended(duck.lvl).fpf||"—"],["$/lvl",fD(DUKY_R[duck.rid]||0.001)]].map(([l,v])=>(
                               <div key={l} style={{background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"7px 5px",textAlign:"center"}}>
                                 <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>{l}</div>
                                 <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700}}>{v}</div>
                               </div>
                             ))}
                           </div>
-                          {duck.lvl<7&&!onCd&&(
+                          {(duck.lvl<7||(lvlPass&&duck.lvl>=7))&&!onCd&&(
                             <div style={{width:"100%", marginTop:10}}>
                               <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:3}}>
                                 <span>XP  Lvl {duck.lvl} → {duck.lvl+1}</span>
-                                <span style={{color:gLC(duck.lvl),fontWeight:700}}>{duck.xp} / {gL(duck.lvl).xp}</span>
+                                <span style={{color:gLC(Math.min(duck.lvl,7)),fontWeight:700}}>{duck.xp} / {gLExtended(duck.lvl).xp}</span>
                               </div>
-                              <PB pct={(duck.xp/gL(duck.lvl).xp)*100} color={`linear-gradient(90deg,${gLC(duck.lvl)},${gLC(Math.min(duck.lvl+1,7))})`} h={6}/>
+                              <PB pct={(duck.xp/gLExtended(duck.lvl).xp)*100} color={`linear-gradient(90deg,${gLC(Math.min(duck.lvl,7))},${gLC(Math.min(duck.lvl+1,7))})`} h={6}/>
                             </div>
                           )}
                           {onCd&&(
@@ -821,11 +850,11 @@ export default function DuckFarm(){
                             </div>
                           )}
                           <div style={{display:"flex",gap:7,marginTop:10}}>
-                            {!duck.tired&&!mining&&!onCd&&duck.lvl<7&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#14532d,#4ade80)",opacity:feed>=gL(duck.lvl).fpf?1:0.4}} onClick={()=>{triggerAnim(duck.id,'feed');feedDuck(duck.id);}}>Feed ({gL(duck.lvl).fpf})</button>}
+                            {!duck.tired&&!mining&&!onCd&&(duck.lvl<7||(lvlPass&&duck.lvl>=7))&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#14532d,#4ade80)",opacity:feed>=gLExtended(duck.lvl).fpf?1:0.4}} onClick={()=>{triggerAnim(duck.id,'feed');feedDuck(duck.id);}}>Feed ({gLExtended(duck.lvl).fpf})</button>}
                             {duck.tired&&(meds.recovery>0)&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#7f1d1d,#ef4444)"}} onClick={()=>{triggerAnim(duck.id,'heal');handleUseMed(duck.id,"recovery");setSelDuck(null);}}>Treat</button>}
                             {mDone&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#78350f,#fbbf24)"}} onClick={()=>claimMining(duck.id)}>Claim</button>}
                             {mining&&!mDone&&<button style={{...S.actionBtn,flex:1,background:"rgba(251,191,36,0.15)",border:"1px solid rgba(251,191,36,0.4)",fontSize:10}} onClick={()=>skipMining(duck.id)}>Skip <CI s={10}/>{(mineSkips+1)*10}</button>}
-                            {duck.lvl===7&&!duck.tired&&!mining&&miningCount<MAX_MINE&&breedSlot?.did!==duck.id&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#4c1d95,#f0abfc)"}} onClick={()=>{sendMining(duck.id);scheduleNotif(duck.id,duck.nickname||r.name,Date.now()+MINE_SECS*1000);setSelDuck(null);}}>Mine</button>}
+                            {duck.lvl>=7&&!duck.tired&&!mining&&miningCount<MAX_MINE&&breedSlot?.did!==duck.id&&<button style={{...S.actionBtn,flex:1,background:"linear-gradient(135deg,#4c1d95,#f0abfc)"}} onClick={()=>{sendMining(duck.id);scheduleNotif(duck.id,duck.nickname||r.name,Date.now()+MINE_SECS*1000);setSelDuck(null);}}>Mine</button>}
                             <button style={{...S.actionBtn,background:"rgba(99,102,241,0.2)",padding:"7px 10px"}} onClick={()=>{setNicknameFor(duck.id);setNickInput(duck.nickname||"");}}>Edit</button>
                           </div>
                         </G>
@@ -1057,12 +1086,13 @@ export default function DuckFarm(){
                                   ))}
                                 </div>
                               ):<div style={{color:"#f0abfc",fontSize:12,fontWeight:700,marginBottom:12}}>Max rarity reached!</div>}
-                              {!duck.tired&&nR&&(
+                              {!duck.tired&&nR&&duck.lvl>=7&&(
                                 <button style={{...S.btn,width:"100%",background:isSel?`linear-gradient(135deg,#166534,#4ade80)`:`linear-gradient(135deg,#4c1d95,${r.color})`,fontSize:12,padding:"10px"}}
                                   onClick={(e)=>{e.stopPropagation();setSelDuck(isSel?null:duck);}}>
                                   {isSel?"Selected — Start below":"Select for Breeding"}
                                 </button>
                               )}
+                              {!duck.tired&&nR&&duck.lvl<7&&<div style={{fontSize:11,color:"#fbbf24",fontWeight:700,textAlign:"center"}}>Need Lvl 7 to breed</div>}
                               {duck.tired&&<div style={{fontSize:11,color:"#ef4444",fontWeight:700}}>Go to Clinic first</div>}
                             </div>
                           </div>
@@ -1189,7 +1219,7 @@ export default function DuckFarm(){
         {tab==="shop"&&(
           <div style={S.col}>
             <div style={{display:"flex",gap:7}}>
-              {[["store","Store"],["tasks","Tasks"]].map(([st,lb])=>(
+              {[["store","Store"],["market","Market"],["tasks","Tasks"]].map(([st,lb])=>(
                 <button key={st} style={{...S.subTab,...(shopTab===st?S.subOn:{}),...(st==="tasks"&&completedCount>claimedCount?{borderColor:"rgba(251,191,36,0.5)",color:shopTab===st?"#fbbf24":"rgba(251,191,36,0.6)"}:{})}} onClick={()=>setShopTab(st)}>
                   {lb}{st==="tasks"&&completedCount>claimedCount?` (${completedCount-claimedCount})`:""}
                 </button>
@@ -1208,9 +1238,9 @@ export default function DuckFarm(){
                 <G style={{borderColor:"rgba(251,191,36,0.3)",background:"rgba(251,191,36,0.05)"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
                     <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13,color:"#fbbf24"}}>Completion Bonus</div><div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Complete all 5 → Syr×5 + Med×2</div></div>
-                    {claimedCount===5?<B color="#4ade80" size={10}>Done</B>:<div style={{fontSize:11,fontFamily:"'Orbitron',sans-serif",color:"#fbbf24"}}>{5-claimedCount} left</div>}
+                    {completionBonusClaimed?<B color="#4ade80" size={10}>Done</B>:claimedCount===5?<B color="#fbbf24" size={10}>Ready!</B>:<div style={{fontSize:11,fontFamily:"'Orbitron',sans-serif",color:"#fbbf24"}}>{5-claimedCount} left</div>}
                   </div>
-                  {claimedCount===5&&<button style={{...S.btn,width:"100%",marginTop:8,background:"linear-gradient(135deg,#78350f,#fbbf24)"}} onClick={()=>{setSyringes(s=>s+5);setMeds(m=>({...m,recovery:(m.recovery||0)+2}));addFloat("🏆 +5💉+2💊","#fbbf24");}}>Claim Bonus</button>}
+                  {claimedCount===5&&!completionBonusClaimed&&<button style={{...S.btn,width:"100%",marginTop:8,background:"linear-gradient(135deg,#78350f,#fbbf24)"}} onClick={()=>{setSyringes(s=>s+5);setMeds(m=>({...m,recovery:(m.recovery||0)+2}));addFloat("🏆 +5💉+2💊","#fbbf24");setCompletionBonusClaimed(true);}}>Claim Bonus</button>}
                 </G>
                 {renderWatchTask()}
                 {dailyTasks.map(task=>{
@@ -1375,7 +1405,84 @@ export default function DuckFarm(){
             {UPGRADES.map(u=>(
               <G key={u.id} style={{opacity:upgrades[u.id]?0.5:1}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{flex:1}}><div style={{fontWeight:700,fontSize:12,color:"#4ade80"}}>{u.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>{u.desc}</div></div><button style={{...S.btn,opacity:!upgrades[u.id]&&coins>=u.cost?1:0.4}} onClick={()=>{if(upgrades[u.id]||coins<u.cost)return;setCoins(c=>c-u.cost);setUpgrades(p=>({...p,[u.id]:true}));addFloat("Activated!","#4ade80");}}>{upgrades[u.id]?"Done":<><CI/>{u.cost}</>}</button></div></G>
             ))}
+            <SL>Level Pass</SL>
+            <G style={{borderColor:lvlPass?"rgba(74,222,128,0.3)":"rgba(240,171,252,0.35)",background:lvlPass?"rgba(74,222,128,0.04)":"rgba(240,171,252,0.04)",opacity:lvlPass?0.6:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:12,color:"#f0abfc"}}>Lvl Pass — Infinite Levels</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Unlock levels beyond 7 · More feed needed · +DUKY/mine per level</div>
+                </div>
+                <button style={{...S.btn,background:lvlPass?"rgba(255,255,255,0.1)":"linear-gradient(135deg,#7c3aed,#f0abfc)",opacity:lvlPass||coins>=LVL_PASS_COST?1:0.4}} onClick={buyLvlPass}>{lvlPass?"Owned":<><CI/>{LVL_PASS_COST}</>}</button>
+              </div>
+            </G>
             </div>
+            )}
+
+            {shopTab==="market"&&(
+              <div style={S.col}>
+                <G style={{background:"linear-gradient(135deg,rgba(251,191,36,0.12),rgba(99,102,241,0.1))",borderColor:"rgba(251,191,36,0.35)"}}>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:"#fbbf24",marginBottom:3}}>DUCK MARKET</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Cumpără rațe cu Coins sau vinde-le pe ale tale.</div>
+                </G>
+                <SL>Sell your duck</SL>
+                {ducks.length===0
+                  ?<G><div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.35)"}}>No ducks to sell.</div></G>
+                  :ducks.map(duck=>{
+                    const r=gR(duck.rid);
+                    const val=getDuckSellValue(duck);
+                    const isSelling=sellFor===duck.id;
+                    return(
+                      <G key={duck.id} style={{borderColor:isSelling?"rgba(239,68,68,0.4)":"rgba(99,102,241,0.1)"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <Duck breedId={duck.bid} duckId={duck.id} size={46} lvl={duck.lvl}/>
+                          <div style={{flex:1}}>
+                            <div style={{fontWeight:700,fontSize:12,color:r.color}}>{duck.nickname||r.name}</div>
+                            <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Lvl {duck.lvl} · {r.name}</div>
+                          </div>
+                          {!isSelling
+                            ?<button style={{...S.btn,background:"linear-gradient(135deg,#7f1d1d,#ef4444)",fontSize:10}} onClick={()=>setSellFor(duck.id)}>Sell <CI s={10}/>{val}</button>
+                            :<div style={{display:"flex",gap:5}}>
+                              <button style={{...S.btn,background:"linear-gradient(135deg,#7f1d1d,#ef4444)",fontSize:10}} onClick={()=>{setDucks(d=>d.filter(dk=>dk.id!==duck.id));setCoins(c=>c+val);addFloat(`+${val} Coins!`,"#fbbf24");setSellFor(null);}}>Confirm</button>
+                              <button style={{...S.btn,background:"rgba(255,255,255,0.08)",fontSize:10}} onClick={()=>setSellFor(null)}>Cancel</button>
+                            </div>
+                          }
+                        </div>
+                        {isSelling&&<div style={{marginTop:6,fontSize:9,color:"#ef4444",textAlign:"center"}}>⚠️ Vânzarea este permanentă! Rața va fi eliminată.</div>}
+                      </G>
+                    );
+                  })
+                }
+                <SL>Buy from market</SL>
+                {market.map(listing=>{
+                  const r=gR(listing.duckData.rid);
+                  const canBuy=coins>=listing.price&&ducks.length<slots;
+                  return(
+                    <G key={listing.id} style={{borderColor:`${r.color}22`}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <Duck breedId={listing.duckData.bid} duckId={listing.id} size={46} lvl={listing.duckData.lvl}/>
+                        <div style={{flex:1}}>
+                          <div style={{fontWeight:700,fontSize:12,color:r.color}}>{r.name} Duck</div>
+                          <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Lvl {listing.duckData.lvl} · {listing.seller}</div>
+                          <div style={{fontSize:9,color:"rgba(99,102,241,0.5)",marginTop:2}}>{r.name} rarity</div>
+                        </div>
+                        <button style={{...S.btn,background:canBuy?`linear-gradient(135deg,#166534,#4ade80)`:"rgba(99,102,241,0.1)",opacity:canBuy?1:0.4,flexShrink:0}}
+                          onClick={()=>{
+                            if(!canBuy)return;
+                            if(ducks.length>=slots){addFloat("No slots!","#ef4444");return;}
+                            setCoins(c=>c-listing.price);
+                            const nd={...listing.duckData,id:"d"+nextId,lvlUpAt:null,miningUntil:null,breedCdUntil:null};
+                            setNextId(n=>n+1);
+                            setDucks(d=>[...d,nd]);
+                            setMarket(m=>m.filter(l=>l.id!==listing.id));
+                            addFloat(`Bought! ${r.name} Lvl ${listing.duckData.lvl}`,r.color);
+                          }}><CI/>{listing.price}</button>
+                      </div>
+                    </G>
+                  );
+                })}
+                {market.length===0&&<G><div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.35)"}}>Market is empty. Come back later!</div></G>}
+                <button style={{...S.btn,width:"100%",background:"rgba(99,102,241,0.15)",border:"1px solid rgba(99,102,241,0.3)",fontSize:11}} onClick={()=>setMarket(genNPCMarket())}>Refresh Market</button>
+              </div>
             )}
           </div>
         )}

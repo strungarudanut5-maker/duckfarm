@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   DUKY_R, LVLS, SEEDS, UPGRADES, MEDS,
   MAX_MINE, MINE_SECS, CD_SECS, BREED_CD_SECS, RARITIES, SLOT_COSTS, SYR_COST, MAX_WATER, MAX_ADS,
-  gR, gNR, gL, gLC, gBreed, GEN_OPP, GEN_WEEKLY_OPP, getDailyTasks, fD, fT, ACHIEVEMENTS_TPL, DUKY_R as D_REWARDS,
+  gR, gNR, gL, gLExtended, gLC, gBreed, GEN_OPP, GEN_WEEKLY_OPP, getDailyTasks, fD, fT, ACHIEVEMENTS_TPL, DUKY_R as D_REWARDS,
   STREAK_REWARDS, MAX_AD_COINS, MAX_AD_SYR
 } from "./constants";
 
@@ -60,6 +60,8 @@ export function useGameState() {
   const[breedSkips,  setBreedSkips]  =useState(()=>Number(localStorage.getItem("duky_breedSkips"))||0);
   const[breedCdSkips,setBreedCdSkips]=useState(()=>Number(localStorage.getItem("duky_breedCdSkips"))||0);
   const[lvlSkips,    setLvlSkips]    =useState(()=>Number(localStorage.getItem("duky_lvlSkips"))||0);
+  const[completionBonusClaimed,setCompletionBonusClaimed]=useState(()=>!!JSON.parse(localStorage.getItem("duky_completionBonus")||"false"));
+  const[lvlPass,     setLvlPass]     =useState(()=>!!JSON.parse(localStorage.getItem("duky_lvlPass")||"false"));
 
   const[now,      setNow]      =useState(Date.now());
   const cookTimer=Math.max(0,Math.ceil((cookEndsAt-now)/1000));
@@ -169,7 +171,9 @@ export function useGameState() {
     localStorage.setItem("duky_breedSkips", breedSkips);
     localStorage.setItem("duky_breedCdSkips", breedCdSkips);
     localStorage.setItem("duky_lvlSkips", lvlSkips);
-  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, cookEndsAt, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips]);
+    localStorage.setItem("duky_completionBonus", JSON.stringify(completionBonusClaimed));
+    localStorage.setItem("duky_lvlPass", JSON.stringify(lvlPass));
+  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, cookEndsAt, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips, completionBonusClaimed, lvlPass]);
 
   // Bucla de timp (1s)
   useEffect(()=>{const iv=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(iv);},[]);
@@ -191,6 +195,7 @@ export function useGameState() {
       setTapsToday(0); setAdsToday(0);
       setAdCoinsToday(0); setAdSyrToday(0);
       setDailyTasks(getDailyTasks()); setTaskClaimed({});
+      setCompletionBonusClaimed(false);
     }
     // --- Offline Earnings ---
     const lastActive=Number(localStorage.getItem("duky_lastActive"))||0;
@@ -270,12 +275,13 @@ export function useGameState() {
 
   const feedDuck = useCallback((duckId) => {
     const duck = ducks.find(d => d.id === duckId);
-    if (!duck || duck.lvl >= 7 || duck.tired) return;
+    const maxLvl = lvlPass ? 99 : 7;
+    if (!duck || duck.lvl >= maxLvl || duck.tired) return;
     if (duck.lvlUpAt && duck.lvlUpAt > Math.floor(Date.now() / 1000)) {
       addFloat("Cooldown! ⏳", "#fbbf24");
       return;
     }
-    const ld = gL(duck.lvl);
+    const ld = gLExtended(duck.lvl);
     const fn = ld.fpf || 2;
     if (feed < fn) {
       addFloat(`Need ${fn}🌾`, "#ef4444");
@@ -285,11 +291,12 @@ export function useGameState() {
     setDucks(prev => prev.map(dk => {
       if (dk.id !== duckId) return dk;
       const nx = dk.xp + 10;
-      const up = dk.lvl < 7 && nx >= ld.xp;
+      const up = dk.lvl < maxLvl && nx >= ld.xp;
       if (up) {
-        const dg = DUKY_R[dk.rid] || .001;
+        const base = DUKY_R[dk.rid] || .001;
+        const dg = dk.lvl >= 7 ? +(base * (1 + (dk.lvl - 6) * 0.5)).toFixed(4) : base;
         setDuky(v => +(v + dg).toFixed(4));
-        addFloat(`🎉 Lvl ${dk.lvl + 1}! +${fD(dg)} DUKY`, gLC(dk.lvl + 1));
+        addFloat(`Lvl ${dk.lvl + 1}! +${fD(dg)} DUKY`, gLC(Math.min(dk.lvl + 1, 7)));
         progTask("levelup");
         return { ...dk, lvl: dk.lvl + 1, xp: 0, lvlUpAt: Math.floor(Date.now() / 1000) + CD_SECS };
       }
@@ -297,13 +304,14 @@ export function useGameState() {
       progTask("feed");
       return { ...dk, xp: nx };
     }));
-  }, [ducks, feed, addFloat, progTask]);
+  }, [ducks, feed, lvlPass, addFloat, progTask]);
 
   const startBreeding = useCallback((duckId) => {
     const duck = ducks.find(d => d.id === duckId);
     if (!duck) return;
     const nR = gNR(duck.rid);
     if (!nR) { addFloat("Max rarity!", "#f0abfc"); return; }
+    if (duck.lvl < 7) { addFloat("Need Lvl 7 to breed!", "#ef4444"); return; }
     if (breedSlot) { addFloat("Lab busy!", "#ef4444"); return; }
     if (duck.tired) { addFloat("Duck is tired!", "#ef4444"); return; }
     if (duck.miningUntil && duck.miningUntil > now) { addFloat("Mining! Please wait.", "#ef4444"); return; }
@@ -340,7 +348,7 @@ export function useGameState() {
   const sendMining = useCallback((duckId) => {
     const duck = ducks.find(d => d.id === duckId);
     const miningCount = ducks.filter(d => d.miningUntil && d.miningUntil > now).length;
-    if (!duck || duck.lvl < 7 || duck.tired || miningCount >= MAX_MINE) return;
+    if (!duck || duck.lvl < 7 || duck.tired || miningCount >= MAX_MINE) return; // lvl >= 7 required
     if (breedSlot && breedSlot.did === duckId) { addFloat("Breeding! Please wait.", "#a78bfa"); return; }
     setDucks(d => d.map(dk => dk.id === duckId ? { ...dk, miningUntil: Date.now() + MINE_SECS * 1000 } : dk));
     addFloat("⛏️ Off to mining!", "#f0abfc");
@@ -354,7 +362,8 @@ export function useGameState() {
     const boosted = miningBoostUntil > Date.now();
     const roll = Math.random();
     const base = roll < (r?.mineRate || .7) ? r.mineBase * (0.8 + Math.random() * .4) : r.mineBase * (0.2 + Math.random() * .3);
-    const reward = +(base * (boosted ? 2 : 1)).toFixed(4);
+    const lvlBonus = duck.lvl > 7 ? 1 + (duck.lvl - 7) * 0.3 : 1;
+    const reward = +(base * (boosted ? 2 : 1) * lvlBonus).toFixed(4);
     setDuky(v => +(v + reward).toFixed(4));
     setMineCount(c => c + 1);
     setDucks(d => d.map(dk => dk.id === duckId ? { ...dk, miningUntil: null, tired: true, tiredUntil: Date.now() + 600000 } : dk));
@@ -370,6 +379,14 @@ export function useGameState() {
     setDucks(d => d.map(dk => dk.id === duckId ? { ...dk, miningUntil: Date.now() - 1 } : dk));
     addFloat(`⏩ Mining done!`, "#fbbf24");
   }, [coins, mineSkips, addFloat]);
+
+  const buyLvlPass = useCallback(() => {
+    if (lvlPass) { addFloat("Already owned!", "#fbbf24"); return; }
+    if (coins < 100) { addFloat("Need 100 coins!", "#ef4444"); return; }
+    setCoins(c => c - 100);
+    setLvlPass(true);
+    addFloat("Lvl Pass unlocked!", "#f0abfc");
+  }, [lvlPass, coins, addFloat]);
 
   const skipBreedCd = useCallback((duckId) => {
     const cost = (breedCdSkips + 1) * 10;
@@ -450,5 +467,7 @@ export function useGameState() {
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
     adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday,
     miningBoostUntil, setMiningBoostUntil,
+    completionBonusClaimed, setCompletionBonusClaimed,
+    lvlPass, buyLvlPass,
   };
 }

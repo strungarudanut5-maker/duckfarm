@@ -15,21 +15,46 @@ const DI=({s=13})=><img src="/duky.svg" alt="duky" style={{width:s,height:Math.r
 
 const SELL_BASE={common:30,rare:150,epic:600,legendary:2500,mythic:8000};
 const getDuckSellValue=duck=>Math.round((SELL_BASE[duck.rid]||30)*(0.5+duck.lvl*0.15));
+const AUC_NPC=["QuackMaster","FarmKing","EggLord","DuckBoss","AlphaDuck","MythBreeder","GodFarmer","DuckPro99","LegendFarm","CryptoQuack"];
 
-const NPC_SELLERS=["QuackMaster","FarmKing","EggLord","DuckBoss","AlphaDuck","MythBreeder","GodFarmer","DuckPro99","LegendFarm","CryptoQuack"];
-function genNPCMarket(){
+function genNPCBids(startPrice,endsAt,rid,lvl){
+  const target=Math.round((SELL_BASE[rid]||30)*(0.8+lvl*0.2)*(1+Math.random()*0.4));
+  const n=2+Math.floor(Math.random()*5);
+  const bids=[];let cur=startPrice;const now=Date.now();
+  for(let i=0;i<n;i++){
+    const at=now+(Math.random()*0.85+0.05)*(endsAt-now);
+    cur=Math.min(Math.round(cur*(1.1+Math.random()*0.2)),target);
+    bids.push({at,bidder:AUC_NPC[Math.floor(Math.random()*AUC_NPC.length)],amount:cur});
+  }
+  return bids.sort((a,b)=>a.at-b.at);
+}
+
+function genNPCAuctions(){
   const pool=[
-    {rid:"common",bid:"mallard",lvl:2},{rid:"common",bid:"arctic",lvl:4},{rid:"common",bid:"volcanic",lvl:6},
-    {rid:"rare",bid:"golden",lvl:1},{rid:"rare",bid:"mandarin",lvl:3},{rid:"rare",bid:"golden",lvl:5},
-    {rid:"epic",bid:"black",lvl:1},{rid:"epic",bid:"black",lvl:4},
-    {rid:"legendary",bid:"royal",lvl:1},{rid:"legendary",bid:"cosmic",lvl:2},
-    {rid:"common",bid:"mallard",lvl:3},{rid:"rare",bid:"golden",lvl:2},
+    {rid:"common",bid:"mallard",lvl:2,hours:2},{rid:"common",bid:"arctic",lvl:5,hours:1},
+    {rid:"rare",bid:"golden",lvl:1,hours:4},{rid:"rare",bid:"mandarin",lvl:3,hours:6},
+    {rid:"epic",bid:"black",lvl:1,hours:8},{rid:"epic",bid:"black",lvl:4,hours:12},
+    {rid:"legendary",bid:"royal",lvl:1,hours:24},{rid:"common",bid:"volcanic",lvl:6,hours:3},
+    {rid:"rare",bid:"golden",lvl:2,hours:5},
   ];
-  return pool.map((d,i)=>{
-    const base=SELL_BASE[d.rid]||30;
-    const price=Math.round(base*(0.7+d.lvl*0.18)*(0.9+Math.random()*0.2));
-    return{id:"npc"+i,duckData:{...d,nickname:"",tired:false,xp:0},price,seller:NPC_SELLERS[i%NPC_SELLERS.length],isNPC:true};
+  return pool.map((t,i)=>{
+    const endsAt=Date.now()+t.hours*3600*1000;
+    const sp=Math.round((SELL_BASE[t.rid]||30)*(0.4+t.lvl*0.08));
+    return{id:"auc"+i,duckData:{rid:t.rid,bid:t.bid,lvl:t.lvl,nickname:"",tired:false,xp:0},
+      seller:AUC_NPC[i%AUC_NPC.length],isPlayer:false,startPrice:sp,endsAt,
+      npcBids:genNPCBids(sp,endsAt,t.rid,t.lvl),settled:false};
   });
+}
+
+// Returns {currentBid, leader, isPlayerWinning} for an auction given now + player's bid amount
+function getAucState(auc,playerBid,now){
+  const fired=auc.npcBids.filter(b=>b.at<=now);
+  const topNPC=fired.reduce((top,b)=>(!top||b.amount>top.amount)?b:top,null);
+  const npcAmt=topNPC?.amount||0;
+  const pAmt=playerBid||0;
+  if(pAmt>npcAmt)return{currentBid:pAmt,leader:"You",isPlayerWinning:true,topNPC};
+  if(npcAmt>0)return{currentBid:npcAmt,leader:topNPC.bidder,isPlayerWinning:false,topNPC};
+  return{currentBid:auc.startPrice,leader:null,isPlayerWinning:false,topNPC:null};
 }
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
@@ -66,12 +91,19 @@ export default function DuckFarm(){
   const[skipFor,  setSkipFor]  =useState(null);
   const[refInput, setRefInput] =useState("");
   const[refApplied,setRefApplied]=useState(false);
-  const[sellFor,  setSellFor]  =useState(null); // duckId to confirm sell
-  const[market,   setMarket]   =useState(()=>{
-    const saved=localStorage.getItem("duky_market");
-    if(saved){try{return JSON.parse(saved);}catch(e){}}
-    return genNPCMarket();
+  const[sellFor,  setSellFor]  =useState(null);
+  const[auctions, setAuctions] =useState(()=>{
+    const saved=localStorage.getItem("duky_auctions");
+    if(saved){try{const p=JSON.parse(saved);if(p&&p.length)return p;}catch(e){}}
+    return genNPCAuctions();
   });
+  const[playerBids,setPlayerBids]=useState(()=>{
+    try{return JSON.parse(localStorage.getItem("duky_playerBids")||"{}");}catch(e){return{};}
+  });
+  const[bidInputs, setBidInputs] =useState({});
+  const[listFor,   setListFor]   =useState(null);
+  const[listPrice, setListPrice] =useState(50);
+  const[listHours, setListHours] =useState(4);
   const sliderRef = useRef(null);
   const touchStartX    = useRef(null);
   const mouseStartX    = useRef(null);
@@ -88,8 +120,39 @@ export default function DuckFarm(){
   const [adCountdown, setAdCountdown] = useState(5);
   const [labTab,      setLabTab]      = useState("breed");
   const [shopTab,     setShopTab]     = useState("store");
-  // persist market listings
-  useEffect(()=>{localStorage.setItem("duky_market",JSON.stringify(market));},[market]);
+  useEffect(()=>{localStorage.setItem("duky_auctions",JSON.stringify(auctions));},[auctions]);
+  useEffect(()=>{localStorage.setItem("duky_playerBids",JSON.stringify(playerBids));},[playerBids]);
+
+  // Settle ended auctions
+  useEffect(()=>{
+    auctions.forEach(auc=>{
+      if(auc.endsAt>now||auc.settled)return;
+      const pb=playerBids[auc.id]||0;
+      const st=getAucState(auc,pb,now);
+      if(!auc.isPlayer){
+        // NPC auction — if player won, give duck & deduct coins
+        if(st.isPlayerWinning&&pb>0){
+          setDucks(d=>[...d,{...auc.duckData,id:"d"+Date.now(),lvlUpAt:null,miningUntil:null,breedCdUntil:null}]);
+          setCoins(c=>Math.max(0,+(c-pb).toFixed(2)));
+          addFloat(`Won auction! ${gR(auc.duckData.rid)?.name} Lvl ${auc.duckData.lvl}`,"#4ade80");
+        } else if(pb>0){
+          addFloat(`Outbid on auction — no duck`,"#ef4444");
+        }
+      } else {
+        // Player-listed auction
+        if(st.currentBid>auc.startPrice&&!st.isPlayerWinning){
+          // NPC bought it
+          setCoins(c=>+(c+st.currentBid).toFixed(2));
+          addFloat(`Sold! +${st.currentBid} Coins`,"#fbbf24");
+        } else {
+          // No buyer — return duck
+          setDucks(d=>[...d,{...auc.duckData,id:"d"+Date.now(),lvlUpAt:null,miningUntil:null,breedCdUntil:null}]);
+          addFloat(`Auction ended, no sale — duck returned`,"#94a3b8");
+        }
+      }
+      setAuctions(prev=>prev.map(a=>a.id===auc.id?{...a,settled:true}:a));
+    });
+  },[now]); // eslint-disable-line react-hooks/exhaustive-deps
   const [leagueSubTab,setLeagueSubTab]= useState("daily");
   const [tutorialStep,setTutorialStep]= useState(()=>!localStorage.getItem("duky_tutorialDone")?1:0);
   const [tabTutorial, setTabTutorial] = useState(null);
@@ -1420,68 +1483,166 @@ export default function DuckFarm(){
 
             {shopTab==="market"&&(
               <div style={S.col}>
-                <G style={{background:"linear-gradient(135deg,rgba(251,191,36,0.12),rgba(99,102,241,0.1))",borderColor:"rgba(251,191,36,0.35)"}}>
-                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:"#fbbf24",marginBottom:3}}>DUCK MARKET</div>
-                  <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Cumpără rațe cu Coins sau vinde-le pe ale tale.</div>
+                {/* Header */}
+                <G style={{background:"linear-gradient(135deg,rgba(251,191,36,0.12),rgba(99,102,241,0.1))",borderColor:"rgba(251,191,36,0.4)"}}>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:"#fbbf24",marginBottom:3}}>AUCTION HOUSE</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Licitează rațe · Listează propriile rațe · Câștigătorul primește rața la final.</div>
                 </G>
-                <SL>Sell your duck</SL>
-                {ducks.length===0
-                  ?<G><div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.35)"}}>No ducks to sell.</div></G>
-                  :ducks.map(duck=>{
-                    const r=gR(duck.rid);
-                    const val=getDuckSellValue(duck);
-                    const isSelling=sellFor===duck.id;
-                    return(
-                      <G key={duck.id} style={{borderColor:isSelling?"rgba(239,68,68,0.4)":"rgba(99,102,241,0.1)"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:10}}>
-                          <Duck breedId={duck.bid} duckId={duck.id} size={46} lvl={duck.lvl}/>
-                          <div style={{flex:1}}>
-                            <div style={{fontWeight:700,fontSize:12,color:r.color}}>{duck.nickname||r.name}</div>
-                            <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Lvl {duck.lvl} · {r.name}</div>
-                          </div>
-                          {!isSelling
-                            ?<button style={{...S.btn,background:"linear-gradient(135deg,#7f1d1d,#ef4444)",fontSize:10}} onClick={()=>setSellFor(duck.id)}>Sell <CI s={10}/>{val}</button>
-                            :<div style={{display:"flex",gap:5}}>
-                              <button style={{...S.btn,background:"linear-gradient(135deg,#7f1d1d,#ef4444)",fontSize:10}} onClick={()=>{setDucks(d=>d.filter(dk=>dk.id!==duck.id));setCoins(c=>c+val);addFloat(`+${val} Coins!`,"#fbbf24");setSellFor(null);}}>Confirm</button>
-                              <button style={{...S.btn,background:"rgba(255,255,255,0.08)",fontSize:10}} onClick={()=>setSellFor(null)}>Cancel</button>
-                            </div>
-                          }
-                        </div>
-                        {isSelling&&<div style={{marginTop:6,fontSize:9,color:"#ef4444",textAlign:"center"}}>⚠️ Vânzarea este permanentă! Rața va fi eliminată.</div>}
-                      </G>
-                    );
-                  })
-                }
-                <SL>Buy from market</SL>
-                {market.map(listing=>{
-                  const r=gR(listing.duckData.rid);
-                  const canBuy=coins>=listing.price&&ducks.length<slots;
+
+                {/* List my duck for auction */}
+                <SL>List your duck</SL>
+                {listFor?(()=>{
+                  const duck=ducks.find(d=>d.id===listFor);
+                  if(!duck)return null;
+                  const r=gR(duck.rid);
                   return(
-                    <G key={listing.id} style={{borderColor:`${r.color}22`}}>
-                      <div style={{display:"flex",alignItems:"center",gap:10}}>
-                        <Duck breedId={listing.duckData.bid} duckId={listing.id} size={46} lvl={listing.duckData.lvl}/>
+                    <G style={{borderColor:"rgba(240,171,252,0.4)"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                        <Duck breedId={duck.bid} duckId={duck.id} size={44} lvl={duck.lvl}/>
+                        <div><div style={{fontWeight:700,fontSize:12,color:r.color}}>{duck.nickname||r.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Lvl {duck.lvl}</div></div>
+                      </div>
+                      <div style={{display:"flex",gap:8,marginBottom:8}}>
                         <div style={{flex:1}}>
-                          <div style={{fontWeight:700,fontSize:12,color:r.color}}>{r.name} Duck</div>
-                          <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Lvl {listing.duckData.lvl} · {listing.seller}</div>
-                          <div style={{fontSize:9,color:"rgba(99,102,241,0.5)",marginTop:2}}>{r.name} rarity</div>
+                          <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",marginBottom:3}}>Start price (Coins)</div>
+                          <input type="number" min={5} max={99999} value={listPrice}
+                            onChange={e=>setListPrice(Math.max(5,Number(e.target.value)))}
+                            style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"6px 8px",color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,boxSizing:"border-box"}}/>
                         </div>
-                        <button style={{...S.btn,background:canBuy?`linear-gradient(135deg,#166534,#4ade80)`:"rgba(99,102,241,0.1)",opacity:canBuy?1:0.4,flexShrink:0}}
-                          onClick={()=>{
-                            if(!canBuy)return;
-                            if(ducks.length>=slots){addFloat("No slots!","#ef4444");return;}
-                            setCoins(c=>c-listing.price);
-                            const nd={...listing.duckData,id:"d"+nextId,lvlUpAt:null,miningUntil:null,breedCdUntil:null};
-                            setNextId(n=>n+1);
-                            setDucks(d=>[...d,nd]);
-                            setMarket(m=>m.filter(l=>l.id!==listing.id));
-                            addFloat(`Bought! ${r.name} Lvl ${listing.duckData.lvl}`,r.color);
-                          }}><CI/>{listing.price}</button>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",marginBottom:3}}>Duration</div>
+                          <div style={{display:"flex",gap:4}}>
+                            {[[1,"1h"],[4,"4h"],[24,"24h"]].map(([h,l])=>(
+                              <button key={h} style={{...S.subTab,flex:1,...(listHours===h?S.subOn:{})}} onClick={()=>setListHours(h)}>{l}</button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:7}}>
+                        <button style={{...S.btn,flex:1,background:"linear-gradient(135deg,#4c1d95,#f0abfc)"}} onClick={()=>{
+                          const endsAt=Date.now()+listHours*3600*1000;
+                          const newAuc={id:"pa"+Date.now(),duckData:{...duck},seller:"You",isPlayer:true,startPrice:listPrice,endsAt,
+                            npcBids:genNPCBids(listPrice,endsAt,duck.rid,duck.lvl),settled:false};
+                          setAuctions(a=>[newAuc,...a]);
+                          setDucks(d=>d.filter(dk=>dk.id!==duck.id));
+                          setListFor(null);
+                          addFloat("Rața a fost listată!","#f0abfc");
+                        }}>List for Auction</button>
+                        <button style={{...S.btn,background:"rgba(255,255,255,0.08)"}} onClick={()=>setListFor(null)}>Cancel</button>
                       </div>
                     </G>
                   );
+                })():(
+                  ducks.length===0
+                    ?<G><div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.35)"}}>No ducks available to list.</div></G>
+                    :<div style={{display:"flex",flexDirection:"column",gap:7}}>
+                      {ducks.map(duck=>{
+                        const r=gR(duck.rid);
+                        const val=getDuckSellValue(duck);
+                        const isSelling=sellFor===duck.id;
+                        return(
+                          <G key={duck.id} style={{borderColor:isSelling?"rgba(239,68,68,0.4)":"rgba(99,102,241,0.1)"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:10}}>
+                              <Duck breedId={duck.bid} duckId={duck.id} size={42} lvl={duck.lvl}/>
+                              <div style={{flex:1}}>
+                                <div style={{fontWeight:700,fontSize:12,color:r.color}}>{duck.nickname||r.name}</div>
+                                <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Lvl {duck.lvl}</div>
+                              </div>
+                              <div style={{display:"flex",gap:5}}>
+                                {!isSelling
+                                  ?<><button style={{...S.btn,background:"linear-gradient(135deg,#4c1d95,#f0abfc)",fontSize:10,padding:"5px 8px"}} onClick={()=>{setListFor(duck.id);setListPrice(val);setSellFor(null);}}>Auction</button>
+                                    <button style={{...S.btn,background:"rgba(239,68,68,0.2)",border:"1px solid rgba(239,68,68,0.35)",fontSize:10,padding:"5px 8px"}} onClick={()=>{setSellFor(duck.id);setListFor(null);}}>Sell <CI s={10}/>{val}</button></>
+                                  :<><button style={{...S.btn,background:"linear-gradient(135deg,#7f1d1d,#ef4444)",fontSize:10}} onClick={()=>{setDucks(d=>d.filter(dk=>dk.id!==duck.id));setCoins(c=>+(c+val).toFixed(2));addFloat(`+${val} Coins!`,"#fbbf24");setSellFor(null);}}>Confirm</button>
+                                    <button style={{...S.btn,background:"rgba(255,255,255,0.08)",fontSize:10}} onClick={()=>setSellFor(null)}>✕</button></>
+                                }
+                              </div>
+                            </div>
+                            {isSelling&&<div style={{marginTop:5,fontSize:9,color:"#ef4444",textAlign:"center"}}>Vânzare instant și permanentă.</div>}
+                          </G>
+                        );
+                      })}
+                    </div>
+                )}
+
+                {/* Active auctions */}
+                <SL>Active auctions ({auctions.filter(a=>!a.settled).length})</SL>
+                {auctions.filter(a=>!a.settled).length===0&&(
+                  <G><div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.35)"}}>No active auctions.</div></G>
+                )}
+                {auctions.filter(a=>!a.settled).map(auc=>{
+                  const r=gR(auc.duckData.rid);
+                  const pb=playerBids[auc.id]||0;
+                  const st=getAucState(auc,pb,now);
+                  const timeLeft=Math.max(0,Math.ceil((auc.endsAt-now)/1000));
+                  const ended=timeLeft===0;
+                  const minBid=st.currentBid+Math.max(1,Math.round(st.currentBid*0.05));
+                  const curInput=bidInputs[auc.id]!==undefined?bidInputs[auc.id]:minBid;
+                  const canAfford=coins>=curInput&&curInput>st.currentBid;
+                  const hasSlot=ducks.length<slots;
+                  return(
+                    <G key={auc.id} style={{borderColor:st.isPlayerWinning?"rgba(74,222,128,0.4)":ended?"rgba(99,102,241,0.2)":`${r.color}22`}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                        <Duck breedId={auc.duckData.bid} duckId={auc.id} size={46} lvl={auc.duckData.lvl}/>
+                        <div style={{flex:1}}>
+                          <div style={{fontWeight:700,fontSize:12,color:r.color}}>{r.name} · Lvl {auc.duckData.lvl}</div>
+                          <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>by {auc.seller}</div>
+                          <div style={{marginTop:3,display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{fontSize:10,fontFamily:"'Orbitron',sans-serif",color:st.isPlayerWinning?"#4ade80":st.leader?"#ef4444":"rgba(255,255,255,0.5)",fontWeight:700}}>
+                              <CI s={10}/>{st.currentBid}
+                            </span>
+                            <span style={{fontSize:9,color:st.isPlayerWinning?"#4ade80":st.leader?"#ef4444":"rgba(255,255,255,0.4)"}}>
+                              {st.isPlayerWinning?"You're winning!":st.leader?`${st.leader} is leading`:"No bids yet"}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{textAlign:"right",flexShrink:0}}>
+                          <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Ends in</div>
+                          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:700,color:ended?"#ef4444":timeLeft<300?"#fb923c":"#fbbf24"}}>{ended?"ENDED":fT(timeLeft)}</div>
+                        </div>
+                      </div>
+                      {!ended&&!auc.isPlayer&&(
+                        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                          <input type="number" min={minBid} value={curInput}
+                            onChange={e=>setBidInputs(b=>({...b,[auc.id]:Number(e.target.value)}))}
+                            style={{flex:1,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"6px 8px",color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:700}}/>
+                          <button style={{...S.btn,background:canAfford&&hasSlot?"linear-gradient(135deg,#166534,#4ade80)":"rgba(99,102,241,0.1)",opacity:canAfford&&hasSlot?1:0.4,padding:"7px 12px"}}
+                            onClick={()=>{
+                              if(!canAfford||!hasSlot)return;
+                              if(curInput<=st.currentBid){addFloat("Bid too low!","#ef4444");return;}
+                              setPlayerBids(b=>({...b,[auc.id]:curInput}));
+                              addFloat(`Bid placed: ${curInput} Coins`,"#4ade80");
+                            }}>Bid</button>
+                        </div>
+                      )}
+                      {!ended&&!auc.isPlayer&&!hasSlot&&<div style={{fontSize:9,color:"#ef4444",marginTop:4,textAlign:"center"}}>No duck slots — buy one first</div>}
+                      {auc.isPlayer&&!ended&&<div style={{fontSize:9,color:"#a78bfa",marginTop:4,textAlign:"center"}}>Your listing · Waiting for bids…</div>}
+                      {ended&&<div style={{fontSize:9,color:"rgba(255,255,255,0.3)",marginTop:4,textAlign:"center"}}>Auction ended — will settle shortly</div>}
+                    </G>
+                  );
                 })}
-                {market.length===0&&<G><div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.35)"}}>Market is empty. Come back later!</div></G>}
-                <button style={{...S.btn,width:"100%",background:"rgba(99,102,241,0.15)",border:"1px solid rgba(99,102,241,0.3)",fontSize:11}} onClick={()=>setMarket(genNPCMarket())}>Refresh Market</button>
+                {/* Settled auctions */}
+                {auctions.filter(a=>a.settled).length>0&&(
+                  <>
+                    <SL>Ended auctions</SL>
+                    {auctions.filter(a=>a.settled).slice(-5).map(auc=>{
+                      const r=gR(auc.duckData.rid);
+                      const pb=playerBids[auc.id]||0;
+                      const st=getAucState(auc,pb,auc.endsAt);
+                      return(
+                        <G key={auc.id} style={{opacity:0.5}}>
+                          <div style={{display:"flex",alignItems:"center",gap:10}}>
+                            <Duck breedId={auc.duckData.bid} duckId={auc.id} size={38} lvl={auc.duckData.lvl}/>
+                            <div style={{flex:1}}>
+                              <div style={{fontWeight:700,fontSize:11,color:r.color}}>{r.name} Lvl {auc.duckData.lvl}</div>
+                              <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Final: <CI s={9}/>{st.currentBid} · {st.leader||"No winner"}</div>
+                            </div>
+                            <B color={st.isPlayerWinning?"#4ade80":"#94a3b8"} size={9}>{st.isPlayerWinning?"Won":"Lost"}</B>
+                          </div>
+                        </G>
+                      );
+                    })}
+                    <button style={{...S.btn,width:"100%",background:"rgba(99,102,241,0.1)",fontSize:10}} onClick={()=>{setAuctions(genNPCAuctions());setPlayerBids({});}}>New Auctions</button>
+                  </>
+                )}
               </div>
             )}
           </div>

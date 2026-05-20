@@ -1012,7 +1012,7 @@ export default function DuckFarm(){
                     const cdSecsLeft=onCd?Math.max(0,duck.lvlUpAt-Math.floor(now/1000)):0;
                     const cdPct=onCd?Math.min(100,((CD_SECS-cdSecsLeft)/CD_SECS)*100):0;
                     const tiredSecsLeft=duck.tired&&duck.tiredUntil?Math.max(0,Math.ceil((duck.tiredUntil-now)/1000)):0;
-                    const canFeed=!duck.tired&&!mining&&!onCd;
+                    const canFeed=!duck.tired&&!mining&&!mDone&&!onCd;
                     const lvlColor=gLC(Math.min(duck.lvl,7));
                     return (
                       <div key={duck.id} style={S.duckCard}>
@@ -1122,7 +1122,7 @@ export default function DuckFarm(){
                                 Feed<br/><span style={{fontSize:9,opacity:0.8}}>{gLExtended(duck.lvl).fpf} 🌾</span>
                               </button>
                             )}
-                            {duck.lvl>=7&&!duck.tired&&!mining&&miningCount<MAX_MINE&&!isBreeding&&(
+                            {duck.lvl>=7&&!duck.tired&&!mining&&!mDone&&miningCount<MAX_MINE&&!isBreeding&&(
                               <button style={{flex:1,minWidth:80,background:"linear-gradient(135deg,#4c1d95,#7c3aed)",border:"1px solid rgba(167,139,250,0.4)",borderRadius:13,padding:"10px 8px",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif",boxShadow:"0 2px 12px rgba(124,58,237,0.3)",transition:"all .2s"}}
                                 onClick={()=>{sendMining(duck.id);scheduleNotif(duck.id,duck.nickname||r.name,Date.now()+MINE_SECS*1000);}}>
                                 Mine<br/><span style={{fontSize:9,opacity:0.8}}>2h trip</span>

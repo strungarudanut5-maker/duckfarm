@@ -44,14 +44,13 @@ export function useGameState() {
   const[adSyrToday,    setAdSyrToday]    =useState(()=>Number(localStorage.getItem("duky_adSyrToday"))||0);
   const[miningBoostUntil,setMiningBoostUntil]=useState(()=>Number(localStorage.getItem("duky_miningBoostUntil"))||0);
   // Timer-e și acțiuni (Noi)
-  const[cooking,  setCooking]  =useState(()=>JSON.parse(localStorage.getItem("duky_cooking"))||null);
-  const[cookEndsAt,setCookEndsAt]=useState(()=>{
-    const saved=Number(localStorage.getItem("duky_cookEndsAt"))||0;
-    if(saved>0)return saved;
-    const oldTimer=Number(localStorage.getItem("duky_cookTimer"))||0;
-    const savedCooking=JSON.parse(localStorage.getItem("duky_cooking"));
-    if(savedCooking&&oldTimer>0)return Date.now()+oldTimer*1000;
-    return 0;
+  const[cooking,  setCooking]  =useState(()=>{
+    const saved=JSON.parse(localStorage.getItem("duky_cooking"));
+    if(!saved)return[];
+    if(Array.isArray(saved))return saved;
+    // migrate old single-slot format
+    const endsAt=Number(localStorage.getItem("duky_cookEndsAt"))||0;
+    return(endsAt>Date.now())?[{...saved,endsAt}]:[];
   });
   const[breedSlot,setBreedSlot]=useState(()=>JSON.parse(localStorage.getItem("duky_breedSlot"))||null);
   const[breedRes, setBreedRes] =useState(null);
@@ -64,7 +63,6 @@ export function useGameState() {
   const[lvlPass,     setLvlPass]     =useState(()=>!!JSON.parse(localStorage.getItem("duky_lvlPass")||"false"));
 
   const[now,      setNow]      =useState(Date.now());
-  const cookTimer=Math.max(0,Math.ceil((cookEndsAt-now)/1000));
   const[dailyTasks,setDailyTasks]=useState(()=>getDailyTasks());
   const[pulse,    setPulse]    =useState(false);
   const[floats,   setFloats]   =useState([]);
@@ -162,7 +160,6 @@ export function useGameState() {
     localStorage.setItem("duky_mineCount", mineCount);
     localStorage.setItem("duky_tapsToday", tapsToday);
     localStorage.setItem("duky_cooking", JSON.stringify(cooking));
-    localStorage.setItem("duky_cookEndsAt", cookEndsAt);
     localStorage.setItem("duky_breedSlot", JSON.stringify(breedSlot));
     localStorage.setItem("duky_adCoinsToday", adCoinsToday);
     localStorage.setItem("duky_adSyrToday", adSyrToday);
@@ -173,7 +170,7 @@ export function useGameState() {
     localStorage.setItem("duky_lvlSkips", lvlSkips);
     localStorage.setItem("duky_completionBonus", JSON.stringify(completionBonusClaimed));
     localStorage.setItem("duky_lvlPass", JSON.stringify(lvlPass));
-  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, cookEndsAt, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips, completionBonusClaimed, lvlPass]);
+  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips, completionBonusClaimed, lvlPass]);
 
   // Bucla de timp (1s)
   useEffect(()=>{const iv=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(iv);},[]);
@@ -431,15 +428,14 @@ export function useGameState() {
 
   // --- TIMERS LOGIC ---
   useEffect(() => {
-    if (!cooking) return;
-    if (cookEndsAt <= now) {
-      setCoins(c => +(c + cooking.coins).toFixed(2));
-      addFloat(`+${cooking.coins} 🪙`, "#fbbf24");
-      progTask("cook");
-      setCooking(null);
-      setCookEndsAt(0);
-    }
-  }, [now, cooking, cookEndsAt, addFloat, progTask]); // eslint-disable-line react-hooks/exhaustive-deps
+    const done=cooking.filter(c=>c.endsAt<=now);
+    if(!done.length)return;
+    const total=+done.reduce((s,c)=>s+c.coins,0).toFixed(2);
+    setCoins(c=>+(c+total).toFixed(2));
+    addFloat(`+${total} 🪙`,"#fbbf24");
+    progTask("cook",done.length);
+    setCooking(prev=>prev.filter(c=>c.endsAt>now));
+  },[now]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(()=>{
     if(!breedSlot) return;
@@ -461,7 +457,7 @@ export function useGameState() {
     now, dailyTasks, setDailyTasks, taskClaimed, setTaskClaimed, tData, setTData, weeklyTData, setWeeklyTData,
     pulse, eps, mult, addFloat, floats, setFloats, progTask,
     achieved, claimAchievement, mineCount, setMineCount,
-    cooking, setCooking, cookTimer, cookEndsAt, setCookEndsAt, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
+    cooking, setCooking, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
     feedDuck, startBreeding, plantSeed, harvestPlot, sendMining, claimMining, buySlot, handleUseMed,
     skipMining, skipBreeding, skipBreedCd, mineSkips, breedSkips, breedCdSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,

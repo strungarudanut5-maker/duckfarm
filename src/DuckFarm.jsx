@@ -68,7 +68,7 @@ export default function DuckFarm(){
     now, dailyTasks, setDailyTasks, taskClaimed, setTaskClaimed, tData, setTData, weeklyTData, setWeeklyTData,
     eps, mult, addFloat, floats, setFloats, progTask,
     achieved, claimAchievement, mineCount, setMineCount,
-    cooking, setCooking, cookTimer, cookEndsAt, setCookEndsAt, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
+    cooking, setCooking, breedSlot, setBreedSlot, breedRes, setBreedRes, breedBoost, setBreedBoost,
     feedDuck, startBreeding, plantSeed, harvestPlot, sendMining, claimMining, buySlot, handleUseMed,
     skipMining, skipBreeding, skipBreedCd, mineSkips, breedSkips, breedCdSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
@@ -397,7 +397,7 @@ export default function DuckFarm(){
     cook:{icon:"",title:"Kitchen",tips:[
       "Cook recipes using eggs to earn Coins.",
       "Higher tier recipes consume more eggs but reward more coins.",
-      "Only one recipe can be cooked at a time — plan carefully!",
+      "Up to 3 recipes can cook simultaneously — stack them!",
       "Tier 4 (Royal) recipes are the most valuable in the game.",
     ]},
     shop:{icon:"",title:"Shop",tips:[
@@ -1353,14 +1353,31 @@ export default function DuckFarm(){
         {/* ═══ BUCĂTĂRIE ═══ */}
         {tab==="cook"&&(
           <div style={S.col}>
-            {cooking&&(
-              <G style={{textAlign:"center",borderColor:"rgba(251,146,60,0.4)"}} glow="#ea580c">
-                
-                <div style={{fontWeight:700,fontSize:14}}>{cooking.name}</div>
-                <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginBottom:4}}>→ <CI/> {cooking.coins} Coins</div>
-                <div style={{color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:700}}>{fT(cookTimer)}</div>
-                <PB pct={Math.min(100,((cooking.time*1000-(cookEndsAt-now))/(cooking.time*1000))*100)} color="linear-gradient(90deg,#ea580c,#fbbf24)" h={5}/>
-              </G>
+            {/* Active cooking slots */}
+            {cooking.length>0&&(
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:4}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",letterSpacing:1}}>COOKING SLOTS</div>
+                  <div style={{fontSize:10,fontWeight:700,color:cooking.length>=3?"#ef4444":"#fbbf24"}}>{cooking.length}/3</div>
+                </div>
+                {cooking.map((slot,i)=>{
+                  const secsLeft=Math.max(0,Math.ceil((slot.endsAt-now)/1000));
+                  const pct=Math.min(100,((slot.time*1000-(slot.endsAt-now))/(slot.time*1000))*100);
+                  return(
+                    <G key={i} style={{borderColor:"rgba(251,146,60,0.4)",padding:"10px 14px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                        <div style={{fontSize:20}}>{slot.emoji}</div>
+                        <div style={{flex:1}}>
+                          <div style={{fontWeight:700,fontSize:12}}>{slot.name}</div>
+                          <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>→ <CI/> {slot.coins} Coins</div>
+                        </div>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:900,color:secsLeft===0?"#4ade80":"#fbbf24"}}>{secsLeft===0?"DONE!":fT(secsLeft)}</div>
+                      </div>
+                      <PB pct={pct} color="linear-gradient(90deg,#ea580c,#fbbf24)" h={4}/>
+                    </G>
+                  );
+                })}
+              </div>
             )}
             <div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:4}}>
               {["Tier 1 — Basic","Tier 2 — Medium","Tier 3 — Pro","Tier 4 — Royal"].map((name,i)=>(
@@ -1375,7 +1392,8 @@ export default function DuckFarm(){
               ))}
             </div>
             {RECIPES.filter(r=>r.tier===activeTier).map(recipe=>{
-              const tc=TIER_COLORS[recipe.tier];const can=!cooking&&eggs>=recipe.eggs;
+              const tc=TIER_COLORS[recipe.tier];
+              const can=cooking.length<3&&eggs>=recipe.eggs;
               const ts=recipe.time<60?`${recipe.time}s`:recipe.time<3600?`${Math.floor(recipe.time/60)}m`:recipe.time<86400?`${Math.floor(recipe.time/3600)}h`:`${Math.floor(recipe.time/86400)}d`;
               return(
                 <G key={recipe.id} style={{borderColor:can?`${tc}44`:"rgba(99,102,241,0.1)"}}>
@@ -1387,7 +1405,7 @@ export default function DuckFarm(){
                       <div style={{fontSize:10,color:tc,fontWeight:700}}><CI/> +{recipe.coins} Coins</div>
                     </div>
                     <button style={{...S.btn,background:can?`linear-gradient(135deg,#ea580c,${tc})`:"rgba(99,102,241,0.1)",opacity:can?1:0.4}}
-                      onClick={()=>{if(!can)return;setEggs(e=>e-recipe.eggs);setCooking(recipe);setCookEndsAt(Date.now()+recipe.time*1000);addFloat(`-${recipe.eggs.toLocaleString()}🥚`,"#ef4444");}}>Cook</button>
+                      onClick={()=>{if(!can)return;setEggs(e=>e-recipe.eggs);setCooking(prev=>[...prev,{...recipe,endsAt:Date.now()+recipe.time*1000}]);addFloat(`-${recipe.eggs.toLocaleString()}🥚`,"#ef4444");}}>Cook</button>
                   </div>
                 </G>
               );

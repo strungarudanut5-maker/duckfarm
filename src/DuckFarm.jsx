@@ -127,11 +127,10 @@ export default function DuckFarm(){
   const [showInventory,setShowInventory]=useState(false);
   const [showSpin,    setShowSpin]    =useState(false);
   const [spinning,    setSpinning]    =useState(false);
-  const [spinHL,      setSpinHL]      =useState(null);
   const [spinResult,  setSpinResult]  =useState(null);
-  // Reset result when reopening popup
-  const openSpin=()=>{if(!spinUsedToday){setSpinResult(null);setSpinHL(null);setShowSpin(true);}};
-  const spinRef=useRef(null);
+  const wheelRef=useRef(null);
+  const rafRef=useRef(null);
+  const wheelAngleRef=useRef(0);
 
   const SPIN_PRIZES=[
     {id:"c10",   label:"+10 Coins",   emoji:"🪙", color:"#fbbf24", weight:30},
@@ -144,23 +143,70 @@ export default function DuckFarm(){
     {id:"c100",  label:"+100 Coins",  emoji:"🪙", color:"#ef4444", weight:1},
   ];
 
+  const drawWheel=useCallback((angle)=>{
+    const canvas=wheelRef.current; if(!canvas)return;
+    const ctx=canvas.getContext("2d");
+    const sz=canvas.width; const cx=sz/2; const cy=sz/2; const r=cx-6;
+    const n=SPIN_PRIZES.length; const slice=(2*Math.PI)/n;
+    const bg=["#1a1040","#0f0a2e"];
+    ctx.clearRect(0,0,sz,sz);
+    SPIN_PRIZES.forEach((prize,i)=>{
+      const start=angle+i*slice-Math.PI/2;
+      const end=start+slice;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
+      ctx.fillStyle=bg[i%2]; ctx.fill();
+      ctx.strokeStyle=prize.color+"99"; ctx.lineWidth=2; ctx.stroke();
+      // outer color arc
+      ctx.beginPath(); ctx.arc(cx,cy,r-1,start,end);
+      ctx.strokeStyle=prize.color; ctx.lineWidth=4; ctx.stroke();
+      // emoji + label
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(start+slice/2);
+      ctx.textAlign="right"; ctx.fillStyle="#fff";
+      ctx.font=`bold 10px 'Exo 2',sans-serif`; ctx.fillText(prize.label,r-10,4);
+      ctx.font=`14px sans-serif`; ctx.fillText(prize.emoji,r-10-60,5);
+      ctx.restore();
+    });
+    // dividers
+    for(let i=0;i<n;i++){
+      const a=angle+i*slice-Math.PI/2;
+      ctx.beginPath(); ctx.moveTo(cx,cy);
+      ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));
+      ctx.strokeStyle="rgba(255,255,255,0.08)"; ctx.lineWidth=1; ctx.stroke();
+    }
+    // center circle
+    ctx.beginPath(); ctx.arc(cx,cy,22,0,2*Math.PI);
+    ctx.fillStyle="#0d0d2b"; ctx.fill();
+    ctx.strokeStyle="#a78bfa"; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle="#a78bfa"; ctx.font="bold 13px 'Orbitron',sans-serif";
+    ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("✦",cx,cy);
+  },[SPIN_PRIZES]);
+
+  useEffect(()=>{if(showSpin&&!spinResult){drawWheel(wheelAngleRef.current);}
+  },[showSpin,spinResult,drawWheel]);
+
+  const openSpin=()=>{if(!spinUsedToday){setSpinResult(null);wheelAngleRef.current=0;setShowSpin(true);}};
+
   const doSpin=()=>{
     if(spinUsedToday||spinning)return;
-    setSpinning(true);setSpinResult(null);
-    const n=SPIN_PRIZES.length;
+    setSpinning(true);
+    const n=SPIN_PRIZES.length; const slice=(2*Math.PI)/n;
     const total=SPIN_PRIZES.reduce((s,p)=>s+p.weight,0);
-    let r=Math.random()*total;
-    let wi=SPIN_PRIZES.length-1;
-    for(let i=0;i<SPIN_PRIZES.length;i++){r-=SPIN_PRIZES[i].weight;if(r<=0){wi=i;break;}}
-    const totalSteps=3*n+wi;
-    let step=0;
-    const go=()=>{
-      step++;
-      const done=step>=totalSteps;
-      setSpinHL(done?wi:step%n);
-      if(done){
+    let rv=Math.random()*total; let wi=n-1;
+    for(let i=0;i<n;i++){rv-=SPIN_PRIZES[i].weight;if(rv<=0){wi=i;break;}}
+    const startAngle=wheelAngleRef.current;
+    const landAngle=-(wi*slice+slice/2);
+    const target=startAngle+Math.PI*2*7+landAngle-(startAngle%(Math.PI*2));
+    const duration=5000; const startTime=performance.now();
+    const animate=(now)=>{
+      const t=Math.min((now-startTime)/duration,1);
+      const ease=1-Math.pow(1-t,4);
+      const cur=startAngle+(target-startAngle)*ease;
+      wheelAngleRef.current=cur;
+      drawWheel(cur);
+      if(t<1){rafRef.current=requestAnimationFrame(animate);}
+      else{
         const prize=SPIN_PRIZES[wi];
-        setSpinning(false);setSpinResult(prize);
+        setSpinning(false); setSpinResult(prize);
         setSpinUsedToday(true);
         localStorage.setItem("duky_spinDate",new Date().toDateString());
         if(prize.id==="c10")  {setCoins(c=>c+10); addFloat("+10🪙","#fbbf24");}
@@ -171,13 +217,9 @@ export default function DuckFarm(){
         if(prize.id==="syr3") {setSyringes(s=>s+3);addFloat("+3💉","#7c3aed");}
         if(prize.id==="med1") {setMeds(m=>({...m,recovery:(m.recovery||0)+1}));addFloat("+1💊","#4ade80");}
         if(prize.id==="duky3"){setDuky(v=>+(v+3).toFixed(4));addFloat("+3💎","#f0abfc");}
-        return;
       }
-      const pct=step/totalSteps;
-      const delay=pct<0.55?80:Math.min(80+(pct-0.55)*700,420);
-      spinRef.current=setTimeout(go,delay);
     };
-    spinRef.current=setTimeout(go,80);
+    rafRef.current=requestAnimationFrame(animate);
   };
   useEffect(()=>{localStorage.setItem("duky_auctions",JSON.stringify(auctions));},[auctions]);
   useEffect(()=>{localStorage.setItem("duky_playerBids",JSON.stringify(playerBids));},[playerBids]);
@@ -889,54 +931,32 @@ export default function DuckFarm(){
 
       {/* Daily Spin popup */}
       {showSpin&&(
-        <div onClick={()=>{if(!spinning)setShowSpin(false);}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:"rgba(7,7,26,0.98)",border:"1px solid rgba(99,102,241,0.45)",borderRadius:24,padding:"28px 22px 24px",width:"100%",maxWidth:340,boxShadow:"0 0 80px rgba(99,102,241,0.3)",position:"relative",textAlign:"center"}}>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:"rgba(7,7,26,0.98)",border:"1px solid rgba(99,102,241,0.45)",borderRadius:24,padding:"22px 18px 22px",width:"100%",maxWidth:340,boxShadow:"0 0 80px rgba(99,102,241,0.3)",position:"relative",textAlign:"center"}}>
             {!spinning&&<button onClick={()=>setShowSpin(false)} style={{position:"absolute",top:12,right:12,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:99,padding:"4px 12px",color:"rgba(255,255,255,0.55)",fontSize:14,cursor:"pointer"}}>✕</button>}
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:900,color:"#a78bfa",marginBottom:2,letterSpacing:2}}>DAILY SPIN</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:14}}>One free spin — resets at midnight</div>
 
-            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:900,color:"#a78bfa",marginBottom:4,letterSpacing:2}}>DAILY SPIN</div>
-            <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:20}}>One free spin — resets at midnight</div>
-
-            {/* Sphere */}
-            <div style={{
-              width:140,height:140,borderRadius:"50%",margin:"0 auto 22px",
-              background:spinResult
-                ?`radial-gradient(circle at 35% 30%, #fff, ${spinResult.color} 50%, #0a0a1f)`
-                :"radial-gradient(circle at 35% 30%, #c4b5fd, #6366f1 55%, #1e1b4b)",
-              animation:spinning?"sphereSpin 0.7s ease-in-out infinite":spinResult?"none":"spherePulse 2s ease-in-out infinite",
-              boxShadow:spinResult
-                ?`0 0 60px ${spinResult.color}cc,0 8px 30px rgba(0,0,0,0.6),inset 0 6px 14px rgba(255,255,255,0.2)`
-                :"0 0 45px #6366f1aa,0 8px 30px rgba(0,0,0,0.6),inset 0 6px 14px rgba(255,255,255,0.22)",
-              position:"relative",cursor:spinning||spinResult?"default":"pointer",
-              transition:"box-shadow 0.4s",
-            }} onClick={!spinning&&!spinResult?doSpin:undefined}>
-              {!spinning&&!spinResult&&<div style={{position:"absolute",top:"18%",left:"22%",width:"28%",height:"18%",borderRadius:"50%",background:"rgba(255,255,255,0.45)",filter:"blur(3px)"}}/>}
-              {!spinning&&!spinResult&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:"rgba(255,255,255,0.85)",letterSpacing:1}}>?</div>}
-              {spinResult&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:50}}>{spinResult.emoji}</div>}
-            </div>
-
-            {/* Prize result */}
-            {spinResult?(
-              <div style={{marginBottom:20}}>
-                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:900,color:spinResult.color,marginBottom:4}}>{spinResult.label}!</div>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.45)"}}>Added to your account</div>
+            {/* Wheel + pointer */}
+            {!spinResult&&(
+              <div style={{position:"relative",width:260,height:260,margin:"0 auto 10px"}}>
+                {/* pointer triangle at top */}
+                <div style={{position:"absolute",top:-2,left:"50%",transform:"translateX(-50%)",width:0,height:0,borderLeft:"10px solid transparent",borderRight:"10px solid transparent",borderTop:"22px solid #a78bfa",zIndex:2,filter:"drop-shadow(0 0 6px #a78bfacc)"}}/>
+                <canvas ref={wheelRef} width={260} height={260} style={{borderRadius:"50%",display:"block"}}/>
               </div>
-            ):(
-              /* Possible prizes preview */
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:20}}>
-                {SPIN_PRIZES.map((prize,i)=>{
-                  const hl=spinHL===i;
-                  return(
-                    <div key={prize.id} style={{borderRadius:10,border:`1px solid ${hl?prize.color:"rgba(99,102,241,0.18)"}`,background:hl?`${prize.color}28`:"rgba(255,255,255,0.03)",padding:"8px 3px",textAlign:"center",transition:"all 0.07s",transform:hl?"scale(1.1)":"scale(1)",boxShadow:hl?`0 0 14px ${prize.color}99`:"none"}}>
-                      <div style={{fontSize:18}}>{prize.emoji}</div>
-                      <div style={{fontSize:7,color:hl?prize.color:"rgba(255,255,255,0.4)",marginTop:2,fontWeight:hl?700:400,lineHeight:1.3}}>{prize.label}</div>
-                    </div>
-                  );
-                })}
+            )}
+
+            {/* Result */}
+            {spinResult&&(
+              <div style={{padding:"20px 10px 16px",textAlign:"center"}}>
+                <div style={{fontSize:56,marginBottom:8}}>{spinResult.emoji}</div>
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:20,fontWeight:900,color:spinResult.color,marginBottom:6}}>{spinResult.label}!</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.45)"}}>Added to your account. Come back tomorrow!</div>
               </div>
             )}
 
             {!spinResult?(
-              <button onClick={doSpin} disabled={spinning} style={{...S.btn,width:"100%",background:"linear-gradient(135deg,#312e81,#6366f1)",opacity:spinning?0.6:1,fontSize:14,padding:"13px",cursor:spinning?"default":"pointer"}}>
+              <button onClick={doSpin} disabled={spinning} style={{...S.btn,width:"100%",background:spinning?"rgba(99,102,241,0.3)":"linear-gradient(135deg,#312e81,#6366f1)",fontSize:14,padding:"13px",marginTop:6,cursor:spinning?"default":"pointer",opacity:spinning?0.7:1}}>
                 {spinning?"Spinning...":"SPIN"}
               </button>
             ):(

@@ -124,6 +124,7 @@ export default function DuckFarm(){
   const [adCountdown, setAdCountdown] = useState(5);
   const [labTab,      setLabTab]      = useState("breed");
   const [shopTab,     setShopTab]     = useState("store");
+  const [showInventory,setShowInventory]=useState(false);
   useEffect(()=>{localStorage.setItem("duky_auctions",JSON.stringify(auctions));},[auctions]);
   useEffect(()=>{localStorage.setItem("duky_playerBids",JSON.stringify(playerBids));},[playerBids]);
 
@@ -830,6 +831,122 @@ export default function DuckFarm(){
       {/* Skip modal */}
       {renderSkipModal()}
 
+      {/* Inventory popup */}
+      {showInventory&&(
+        <div onClick={()=>setShowInventory(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.82)",zIndex:9999,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"rgba(7,7,26,0.98)",border:"1px solid rgba(99,102,241,0.35)",borderRadius:"24px 24px 0 0",padding:"20px 18px 30px",width:"100%",maxWidth:440,boxShadow:"0 0 60px rgba(99,102,241,0.2)",maxHeight:"80vh",overflowY:"auto"}}>
+            {/* Header */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:900,color:"#a78bfa",letterSpacing:2}}>INVENTAR</div>
+              <button onClick={()=>setShowInventory(false)} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:99,padding:"4px 13px",color:"rgba(255,255,255,0.6)",fontSize:13,cursor:"pointer"}}>✕</button>
+            </div>
+
+            {/* Syringes */}
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>SERINGI</div>
+            <div style={{background:"rgba(167,139,250,0.07)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+              <div style={{fontSize:26}}>💉</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:12,color:"#a78bfa"}}>Seringi</div>
+                <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>Necesare pentru breeding</div>
+              </div>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:24,fontWeight:900,color:"#a78bfa"}}>{syringes}</div>
+            </div>
+
+            {/* Medicines */}
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>MEDICAMENTE</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+
+              {/* Recovery Pill */}
+              <div style={{background:"rgba(74,222,128,0.06)",border:"1px solid rgba(74,222,128,0.2)",borderRadius:14,padding:"12px 14px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:(meds.recovery>0&&ducks.some(d=>d.tired))?10:0}}>
+                  <div style={{fontSize:24}}>💊</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:12,color:"#4ade80"}}>Recovery Pill</div>
+                    <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>Vindecă oboseala instant</div>
+                    {!(meds.recovery>0)&&<div style={{fontSize:9,color:"rgba(255,255,255,0.2)",marginTop:2}}>Nu ai în inventar</div>}
+                    {meds.recovery>0&&!ducks.some(d=>d.tired)&&<div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:2}}>Nicio rată obosită</div>}
+                  </div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:meds.recovery>0?"#4ade80":"rgba(74,222,128,0.3)"}}>{meds.recovery||0}</div>
+                </div>
+                {meds.recovery>0&&ducks.filter(d=>d.tired).length>0&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                    {ducks.filter(d=>d.tired).map(d=>{
+                      const r=gR(d.rid);
+                      const sLeft=d.tiredUntil?Math.max(0,Math.ceil((d.tiredUntil-now)/1000)):0;
+                      return(
+                        <div key={d.id} style={{display:"flex",alignItems:"center",gap:8,background:"rgba(74,222,128,0.06)",borderRadius:10,padding:"6px 10px"}}>
+                          <div style={{fontSize:10,color:"rgba(255,255,255,0.5)"}}>{d.nickname||r.name}</div>
+                          <div style={{flex:1,fontSize:9,color:"rgba(255,255,255,0.3)"}}>Lvl {d.lvl} · recuperare {fT(sLeft)}</div>
+                          <button style={{background:"linear-gradient(135deg,#14532d,#4ade80)",border:"none",borderRadius:8,padding:"5px 12px",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}
+                            onClick={()=>handleUseMed(d.id,"recovery")}>Heal</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Breeding Boost */}
+              <div style={{background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
+                <div style={{fontSize:24}}>⚡</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:12,color:"#fbbf24"}}>Breeding Boost</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>×2 șansă la breeding</div>
+                  {breedBoost&&<div style={{fontSize:9,color:"#fbbf24",marginTop:2,fontWeight:700}}>ACTIV pentru urmatorul breeding</div>}
+                  {!(meds.breedboost>0)&&!breedBoost&&<div style={{fontSize:9,color:"rgba(255,255,255,0.2)",marginTop:2}}>Nu ai în inventar</div>}
+                </div>
+                {breedBoost?(
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:900,color:"#fbbf24",padding:"4px 8px",border:"1px solid rgba(251,191,36,0.4)",borderRadius:8}}>ACTIV</div>
+                ):meds.breedboost>0?(
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:"#fbbf24"}}>{meds.breedboost}</div>
+                    <button style={{background:"linear-gradient(135deg,#78350f,#fbbf24)",border:"none",borderRadius:8,padding:"5px 12px",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}
+                      onClick={()=>handleUseMed("_","breedboost")}>Activează</button>
+                  </div>
+                ):(
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:"rgba(251,191,36,0.25)"}}>0</div>
+                )}
+              </div>
+            </div>
+
+            {/* Active Boosts */}
+            {(miningBoostUntil>now||breedBoost)&&(
+              <>
+                <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>BOOST-URI ACTIVE</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+                  {miningBoostUntil>now&&(
+                    <div style={{background:"rgba(240,171,252,0.06)",border:"1px solid rgba(240,171,252,0.25)",borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{fontSize:24}}>⛏️</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:700,fontSize:12,color:"#f0abfc"}}>Mining Boost ×2</div>
+                        <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>Dubleaza DUKY din mining</div>
+                      </div>
+                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:900,color:"#f0abfc"}}>{fT(Math.ceil((miningBoostUntil-now)/1000))}</div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Skip tickets summary */}
+            {(mineSkips+breedSkips+breedCdSkips+lvlSkips)>0&&(
+              <>
+                <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>SKIP-URI FOLOSITE</div>
+                <div style={{background:"rgba(99,102,241,0.06)",border:"1px solid rgba(99,102,241,0.15)",borderRadius:14,padding:"10px 14px",display:"flex",flexWrap:"wrap",gap:12}}>
+                  {[["⛏️ Mine",mineSkips,(mineSkips+1)*10],["🧬 Breed",breedSkips,(breedSkips+1)*10],["⏳ CD",breedCdSkips,(breedCdSkips+1)*10],["⭐ Lvl",lvlSkips,(lvlSkips+1)*10]].map(([lb,n,next])=>(
+                    <div key={lb} style={{textAlign:"center"}}>
+                      <div style={{fontSize:10,color:"rgba(255,255,255,0.5)"}}>{lb}</div>
+                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:"#6366f1"}}>{n}x</div>
+                      <div style={{fontSize:8,color:"rgba(255,255,255,0.25)"}}>next: {next}🪙</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={S.header}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:7}}>
@@ -878,11 +995,19 @@ export default function DuckFarm(){
 
             {subTab==="ducks"&&(
               <div style={S.col}>
-                {/* Sorting Controls */}
-                <div style={{display:"flex", gap:6, alignItems:"center", marginBottom:4, justifyContent:"center"}}>
-                  {[["id","NEW"],["rarity","RARE"],["lvl","LVL"]].map(([mode,icon])=>(
-                    <button key={mode} onClick={()=>setSortBy(mode)} style={{...S.smallBtn, background:sortBy===mode?"#6366f1":"rgba(99,102,241,0.1)", border:sortBy===mode?"1px solid #a78bfa":"1px solid rgba(99,102,241,0.2)"}}>{icon}</button>
-                  ))}
+                {/* Sorting Controls + Inventory button */}
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                  <div style={{display:"flex",gap:6}}>
+                    {[["id","NEW"],["rarity","RARE"],["lvl","LVL"]].map(([mode,icon])=>(
+                      <button key={mode} onClick={()=>setSortBy(mode)} style={{...S.smallBtn, background:sortBy===mode?"#6366f1":"rgba(99,102,241,0.1)", border:sortBy===mode?"1px solid #a78bfa":"1px solid rgba(99,102,241,0.2)"}}>{icon}</button>
+                    ))}
+                  </div>
+                  <button onClick={()=>setShowInventory(true)} style={{...S.smallBtn,background:"rgba(167,139,250,0.12)",border:"1px solid rgba(167,139,250,0.35)",color:"#a78bfa",display:"flex",alignItems:"center",gap:5,position:"relative"}}>
+                    <span style={{fontSize:12}}>🎒</span><span>Inventar</span>
+                    {(syringes+(meds.recovery||0)+(meds.breedboost||0))>0&&(
+                      <span style={{position:"absolute",top:-4,right:-4,background:"#6366f1",color:"#fff",fontSize:7,borderRadius:99,padding:"1px 4px",fontWeight:700,minWidth:14,textAlign:"center"}}>{syringes+(meds.recovery||0)+(meds.breedboost||0)}</span>
+                    )}
+                  </button>
                 </div>
 
                 <div ref={sliderRef} style={{...S.duckSlider,cursor:isDragging.current?"grabbing":"grab"}} onScroll={handleSliderScroll} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseLeave}>

@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/duckfarm/static/css/main.5f8f072d.css",
-    "main.js": "/duckfarm/static/js/main.42ba9e2b.js",
-    "index.html": "/duckfarm/index.html",
-    "main.5f8f072d.css.map": "/duckfarm/static/css/main.5f8f072d.css.map",
-    "main.42ba9e2b.js.map": "/duckfarm/static/js/main.42ba9e2b.js.map"
+    "main.css": "/static/css/main.5f8f072d.css",
+    "main.js": "/static/js/main.a367795c.js",
+    "index.html": "/index.html",
+    "main.5f8f072d.css.map": "/static/css/main.5f8f072d.css.map",
+    "main.a367795c.js.map": "/static/js/main.a367795c.js.map"
   },
   "entrypoints": [
     "static/css/main.5f8f072d.css",
-    "static/js/main.42ba9e2b.js"
+    "static/js/main.a367795c.js"
   ]
 }

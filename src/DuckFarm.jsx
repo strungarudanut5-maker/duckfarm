@@ -38,7 +38,7 @@ function genNPCAuctions(){
     {rid:"rare",bid:"golden",lvl:2,hours:5},
   ];
   return pool.map((t,i)=>{
-    const endsAt=Date.now()+t.hours*3600*1000;
+    const endsAt=Date.now()+60*1000;
     const sp=Math.round((SELL_BASE[t.rid]||30)*(0.4+t.lvl*0.08));
     return{id:"auc"+i,duckData:{rid:t.rid,bid:t.bid,lvl:t.lvl,nickname:"",tired:false,xp:0},
       seller:AUC_NPC[i%AUC_NPC.length],isPlayer:false,startPrice:sp,endsAt,
@@ -72,7 +72,7 @@ export default function DuckFarm(){
     feedDuck, startBreeding, plantSeed, harvestPlot, sendMining, claimMining, buySlot, handleUseMed,
     skipMining, skipBreeding, skipBreedCd, mineSkips, breedSkips, breedCdSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
-    adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday,
+    adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday, spinUsedToday, setSpinUsedToday,
     miningBoostUntil, setMiningBoostUntil,
     completionBonusClaimed, setCompletionBonusClaimed,
     lvlPass, buyLvlPass,
@@ -125,6 +125,60 @@ export default function DuckFarm(){
   const [labTab,      setLabTab]      = useState("breed");
   const [shopTab,     setShopTab]     = useState("store");
   const [showInventory,setShowInventory]=useState(false);
+  const [showSpin,    setShowSpin]    =useState(false);
+  const [spinning,    setSpinning]    =useState(false);
+  const [spinHL,      setSpinHL]      =useState(null);
+  const [spinResult,  setSpinResult]  =useState(null);
+  // Reset result when reopening popup
+  const openSpin=()=>{if(!spinUsedToday){setSpinResult(null);setSpinHL(null);setShowSpin(true);}};
+  const spinRef=useRef(null);
+
+  const SPIN_PRIZES=[
+    {id:"c10",   label:"+10 Coins",   emoji:"🪙", color:"#fbbf24", weight:30},
+    {id:"syr1",  label:"+1 Syringe",  emoji:"💉", color:"#a78bfa", weight:20},
+    {id:"c25",   label:"+25 Coins",   emoji:"🪙", color:"#f59e0b", weight:15},
+    {id:"med1",  label:"+1 Medicine", emoji:"💊", color:"#4ade80", weight:12},
+    {id:"c50",   label:"+50 Coins",   emoji:"🪙", color:"#fb923c", weight:10},
+    {id:"syr3",  label:"+3 Syringes", emoji:"💉", color:"#7c3aed", weight:7},
+    {id:"duky3", label:"+3 DUKY",     emoji:"💎", color:"#f0abfc", weight:5},
+    {id:"c100",  label:"+100 Coins",  emoji:"🪙", color:"#ef4444", weight:1},
+  ];
+
+  const doSpin=()=>{
+    if(spinUsedToday||spinning)return;
+    setSpinning(true);setSpinResult(null);
+    const n=SPIN_PRIZES.length;
+    const total=SPIN_PRIZES.reduce((s,p)=>s+p.weight,0);
+    let r=Math.random()*total;
+    let wi=SPIN_PRIZES.length-1;
+    for(let i=0;i<SPIN_PRIZES.length;i++){r-=SPIN_PRIZES[i].weight;if(r<=0){wi=i;break;}}
+    const totalSteps=3*n+wi;
+    let step=0;
+    const go=()=>{
+      step++;
+      const done=step>=totalSteps;
+      setSpinHL(done?wi:step%n);
+      if(done){
+        const prize=SPIN_PRIZES[wi];
+        setSpinning(false);setSpinResult(prize);
+        setSpinUsedToday(true);
+        localStorage.setItem("duky_spinDate",new Date().toDateString());
+        if(prize.id==="c10")  {setCoins(c=>c+10); addFloat("+10🪙","#fbbf24");}
+        if(prize.id==="c25")  {setCoins(c=>c+25); addFloat("+25🪙","#f59e0b");}
+        if(prize.id==="c50")  {setCoins(c=>c+50); addFloat("+50🪙","#fb923c");}
+        if(prize.id==="c100") {setCoins(c=>c+100);addFloat("+100🪙","#ef4444");}
+        if(prize.id==="syr1") {setSyringes(s=>s+1);addFloat("+1💉","#a78bfa");}
+        if(prize.id==="syr3") {setSyringes(s=>s+3);addFloat("+3💉","#7c3aed");}
+        if(prize.id==="med1") {setMeds(m=>({...m,recovery:(m.recovery||0)+1}));addFloat("+1💊","#4ade80");}
+        if(prize.id==="duky3"){setDuky(v=>+(v+3).toFixed(4));addFloat("+3💎","#f0abfc");}
+        return;
+      }
+      const pct=step/totalSteps;
+      const delay=pct<0.55?80:Math.min(80+(pct-0.55)*700,420);
+      spinRef.current=setTimeout(go,delay);
+    };
+    spinRef.current=setTimeout(go,80);
+  };
   useEffect(()=>{localStorage.setItem("duky_auctions",JSON.stringify(auctions));},[auctions]);
   useEffect(()=>{localStorage.setItem("duky_playerBids",JSON.stringify(playerBids));},[playerBids]);
 
@@ -248,8 +302,9 @@ export default function DuckFarm(){
   const miningCount=ducks.filter(d=>d.miningUntil&&d.miningUntil>now).length;
   const tiredCount=ducks.filter(d=>d.tired).length;
   const myScore=+(eps*60).toFixed(2);
-  const allPlayers=[...tData.opponents,{id:"me",name:"You",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true}].sort((a,b)=>b.score-a.score);
-  const myRank=allPlayers.findIndex(p=>p.isPlayer)+1;
+  const _myPlayerEntry={id:"me",name:"You",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true};
+  const allPlayers=[...tData.opponents,...(tData.joined?[_myPlayerEntry]:[])].sort((a,b)=>b.score-a.score);
+  const myRank=tData.joined?(allPlayers.findIndex(p=>p.isPlayer)+1):null;
 
   useEffect(()=>{
     if(breedRes?.newId) {
@@ -617,6 +672,7 @@ export default function DuckFarm(){
   };
 
   const renderTournamentReward = () => {
+    if(!tData.joined||myRank===null)return null;
     const reward = TREWARD(myRank);
     const ended = tData.endTime <= now;
     const hasSeed = reward.seeds && (reward.seeds.legendary+reward.seeds.medium+reward.seeds.basic)>0;
@@ -830,6 +886,67 @@ export default function DuckFarm(){
 
       {/* Skip modal */}
       {renderSkipModal()}
+
+      {/* Daily Spin popup */}
+      {showSpin&&(
+        <div onClick={()=>{if(!spinning)setShowSpin(false);}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"rgba(7,7,26,0.98)",border:"1px solid rgba(99,102,241,0.45)",borderRadius:24,padding:"28px 22px 24px",width:"100%",maxWidth:340,boxShadow:"0 0 80px rgba(99,102,241,0.3)",position:"relative",textAlign:"center"}}>
+            {!spinning&&<button onClick={()=>setShowSpin(false)} style={{position:"absolute",top:12,right:12,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:99,padding:"4px 12px",color:"rgba(255,255,255,0.55)",fontSize:14,cursor:"pointer"}}>✕</button>}
+
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:900,color:"#a78bfa",marginBottom:4,letterSpacing:2}}>DAILY SPIN</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:20}}>One free spin — resets at midnight</div>
+
+            {/* Sphere */}
+            <div style={{
+              width:140,height:140,borderRadius:"50%",margin:"0 auto 22px",
+              background:spinResult
+                ?`radial-gradient(circle at 35% 30%, #fff, ${spinResult.color} 50%, #0a0a1f)`
+                :"radial-gradient(circle at 35% 30%, #c4b5fd, #6366f1 55%, #1e1b4b)",
+              animation:spinning?"sphereSpin 0.7s ease-in-out infinite":spinResult?"none":"spherePulse 2s ease-in-out infinite",
+              boxShadow:spinResult
+                ?`0 0 60px ${spinResult.color}cc,0 8px 30px rgba(0,0,0,0.6),inset 0 6px 14px rgba(255,255,255,0.2)`
+                :"0 0 45px #6366f1aa,0 8px 30px rgba(0,0,0,0.6),inset 0 6px 14px rgba(255,255,255,0.22)",
+              position:"relative",cursor:spinning||spinResult?"default":"pointer",
+              transition:"box-shadow 0.4s",
+            }} onClick={!spinning&&!spinResult?doSpin:undefined}>
+              {!spinning&&!spinResult&&<div style={{position:"absolute",top:"18%",left:"22%",width:"28%",height:"18%",borderRadius:"50%",background:"rgba(255,255,255,0.45)",filter:"blur(3px)"}}/>}
+              {!spinning&&!spinResult&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:"rgba(255,255,255,0.85)",letterSpacing:1}}>?</div>}
+              {spinResult&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:50}}>{spinResult.emoji}</div>}
+            </div>
+
+            {/* Prize result */}
+            {spinResult?(
+              <div style={{marginBottom:20}}>
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:900,color:spinResult.color,marginBottom:4}}>{spinResult.label}!</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.45)"}}>Added to your account</div>
+              </div>
+            ):(
+              /* Possible prizes preview */
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:20}}>
+                {SPIN_PRIZES.map((prize,i)=>{
+                  const hl=spinHL===i;
+                  return(
+                    <div key={prize.id} style={{borderRadius:10,border:`1px solid ${hl?prize.color:"rgba(99,102,241,0.18)"}`,background:hl?`${prize.color}28`:"rgba(255,255,255,0.03)",padding:"8px 3px",textAlign:"center",transition:"all 0.07s",transform:hl?"scale(1.1)":"scale(1)",boxShadow:hl?`0 0 14px ${prize.color}99`:"none"}}>
+                      <div style={{fontSize:18}}>{prize.emoji}</div>
+                      <div style={{fontSize:7,color:hl?prize.color:"rgba(255,255,255,0.4)",marginTop:2,fontWeight:hl?700:400,lineHeight:1.3}}>{prize.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!spinResult?(
+              <button onClick={doSpin} disabled={spinning} style={{...S.btn,width:"100%",background:"linear-gradient(135deg,#312e81,#6366f1)",opacity:spinning?0.6:1,fontSize:14,padding:"13px",cursor:spinning?"default":"pointer"}}>
+                {spinning?"Spinning...":"SPIN"}
+              </button>
+            ):(
+              <button onClick={()=>setShowSpin(false)} style={{...S.btn,width:"100%",background:"linear-gradient(135deg,#166534,#4ade80)",fontSize:13,padding:"12px"}}>
+                Collect &amp; Close
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Inventory popup */}
       {showInventory&&(
@@ -1593,6 +1710,18 @@ export default function DuckFarm(){
 
             {shopTab==="store"&&(<div style={S.col}>
 
+            {/* === DAILY SPIN sphere card — hidden after use === */}
+            {!spinUsedToday&&(
+              <G style={{background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.08))",borderColor:"rgba(99,102,241,0.4)",textAlign:"center",cursor:"pointer"}} glow="#6366f1" onClick={openSpin}>
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:900,color:"#a78bfa",marginBottom:14,letterSpacing:2}}>DAILY SPIN</div>
+                {/* Sphere */}
+                <div style={{width:90,height:90,borderRadius:"50%",margin:"0 auto 14px",background:"radial-gradient(circle at 35% 30%, #c4b5fd, #6366f1 55%, #1e1b4b)",animation:"spherePulse 2s ease-in-out infinite",cursor:"pointer",position:"relative"}}>
+                  <div style={{position:"absolute",top:"18%",left:"22%",width:"28%",height:"18%",borderRadius:"50%",background:"rgba(255,255,255,0.45)",filter:"blur(3px)"}}/>
+                </div>
+                <div style={{fontSize:10,color:"rgba(255,255,255,0.45)"}}>Tap the sphere for a free daily prize</div>
+              </G>
+            )}
+
             {/* === GRATIS — Reclame zilnice === */}
             <G style={{borderColor:"rgba(74,222,128,0.3)",background:"rgba(74,222,128,0.04)"}}>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:"#4ade80",marginBottom:8}}>FREE DAILY REWARDS</div>
@@ -2038,27 +2167,12 @@ export default function DuckFarm(){
               </div>
             </G>
 
-            <G style={{background:"linear-gradient(135deg,rgba(251,191,36,0.15),rgba(251,146,60,0.1))",borderColor:"rgba(251,191,36,0.35)",textAlign:"center"}} glow="#fbbf24">
-              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:900,color:"#fbbf24",marginBottom:4}}>ACTIVE LEAGUE</div>
-              <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:8}}>
-                {[["Time",tData.endTime<=now?"FINISHED":fT(Math.max(0,Math.floor((tData.endTime-now)/1000))),tData.endTime<=now?"#ef4444":"#fbbf24"],["# Rank",`#${myRank}`,myRank<=3?"#fbbf24":myRank<=10?"#94a3b8":"#e2e8f0"],["eggs/min",myScore,"#4ade80"]].map(([l,v,c])=>(
-                  <div key={l} style={{background:"rgba(0,0,0,0.3)",borderRadius:10,padding:"7px 12px",textAlign:"center"}}>
-                    <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>{l}</div>
-                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:700,color:c}}>{v}</div>
-                  </div>
-                ))}
-              </div>
-              <PB pct={Math.max(0,((24*3600-Math.max(0,Math.floor((tData.endTime-now)/1000)))/(24*3600))*100)} color="linear-gradient(90deg,#78350f,#fbbf24)" h={4}/>
-            </G>
-
-            {renderTournamentReward()}
-
-            {/* Tabel premii 24h */}
+            {/* 24H PRIZES — always visible */}
             <G style={{borderColor:"rgba(99,102,241,0.2)"}}>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#a78bfa",marginBottom:8,letterSpacing:1}}>24H PRIZES</div>
               <div style={{display:"flex",flexDirection:"column",gap:3}}>
                 {PRIZE_TABLE.map((row,i)=>{
-                  const isMyTier=(myRank===1&&i===0)||(myRank<=3&&myRank>1&&i===1)||(myRank<=10&&myRank>3&&i===2)||(myRank<=25&&myRank>10&&i===3)||(myRank<=50&&myRank>25&&i===4)||(myRank>50&&i===5);
+                  const isMyTier=tData.joined&&((myRank===1&&i===0)||(myRank<=3&&myRank>1&&i===1)||(myRank<=10&&myRank>3&&i===2)||(myRank<=25&&myRank>10&&i===3)||(myRank<=50&&myRank>25&&i===4)||(myRank>50&&i===5));
                   return(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 8px",borderRadius:8,background:isMyTier?`${row.color}18`:"rgba(255,255,255,0.02)",border:`1px solid ${isMyTier?row.color:"rgba(99,102,241,0.1)"}`}}>
                       <div style={{fontSize:13,flexShrink:0}}>{row.icon}</div>
@@ -2076,34 +2190,67 @@ export default function DuckFarm(){
               </div>
             </G>
 
-            <G>
-              <SL>Live Leaderboard</SL>
-              <div style={{display:"flex",flexDirection:"column",gap:4,marginTop:6,maxHeight:380,overflowY:"auto"}}>
-                {allPlayers.slice(0,20).map((player,i)=>{
-                  const rank=i+1;const rc=rank<=3?"#fbbf24":rank<=10?"#94a3b8":rank<=25?"#fb923c":"rgba(255,255,255,0.5)";
-                  const r=gR(player.rarityId);
-                  return(
-                    <div key={player.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 9px",borderRadius:9,background:player.isPlayer?"rgba(99,102,241,0.15)":"rgba(255,255,255,0.02)",border:player.isPlayer?"1px solid rgba(99,102,241,0.4)":"1px solid transparent"}}>
-                      <div style={{width:26,textAlign:"center",fontFamily:"'Orbitron',sans-serif",fontSize:rank<=3?13:10,fontWeight:700,color:rc,flexShrink:0}}>{rank}</div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:player.isPlayer?700:400,fontSize:11,color:player.isPlayer?"#a78bfa":"#e2e8f0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{player.name}</div>
-                        <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}><span style={{color:r?.color}}>{r?.name}</span></div>
+            {!tData.joined?(
+              /* Join card */
+              <G style={{background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1))",borderColor:"rgba(99,102,241,0.4)",textAlign:"center"}} glow="#6366f1">
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:900,color:"#a78bfa",marginBottom:6}}>DAILY TOURNAMENT</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.7,marginBottom:10}}>
+                  Compete against {tData.opponents.length} other players.<br/>
+                  Earn eggs to climb the leaderboard &amp; win prizes!<br/>
+                  <span style={{color:"rgba(255,255,255,0.3)",fontSize:10}}>Time left: {fT(Math.max(0,Math.floor((tData.endTime-now)/1000)))}</span>
+                </div>
+                <button style={{...S.btn,background:"linear-gradient(135deg,#312e81,#6366f1)",fontSize:13,padding:"10px 28px"}}
+                  onClick={()=>{setTData(t=>({...t,joined:true}));addFloat("Joined daily!","#a78bfa");}}>
+                  Join Tournament
+                </button>
+              </G>
+            ):(
+              <>
+                <G style={{background:"linear-gradient(135deg,rgba(251,191,36,0.15),rgba(251,146,60,0.1))",borderColor:"rgba(251,191,36,0.35)",textAlign:"center"}} glow="#fbbf24">
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:900,color:"#fbbf24",marginBottom:4}}>ACTIVE LEAGUE</div>
+                  <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:8}}>
+                    {[["Time",tData.endTime<=now?"FINISHED":fT(Math.max(0,Math.floor((tData.endTime-now)/1000))),tData.endTime<=now?"#ef4444":"#fbbf24"],["# Rank",`#${myRank}`,myRank<=3?"#fbbf24":myRank<=10?"#94a3b8":"#e2e8f0"],["eggs/min",myScore,"#4ade80"]].map(([l,v,c])=>(
+                      <div key={l} style={{background:"rgba(0,0,0,0.3)",borderRadius:10,padding:"7px 12px",textAlign:"center"}}>
+                        <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>{l}</div>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:700,color:c}}>{v}</div>
                       </div>
-                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#4ade80",flexShrink:0}}>{player.score}🥚</div>
-                    </div>
-                  );
-                })}
-              </div>
-              {myRank>20&&<div style={{marginTop:6,padding:"6px 9px",borderRadius:9,background:"rgba(99,102,241,0.15)",border:"1px solid rgba(99,102,241,0.4)",display:"flex",alignItems:"center",gap:7}}>
-                <div style={{width:26,textAlign:"center",fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#a78bfa"}}>#{myRank}</div>
-                <div style={{flex:1,fontSize:11,color:"#a78bfa",fontWeight:700}}>You</div>
-                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,color:"#4ade80"}}>{myScore}🥚</div>
-              </div>}
-            </G>
+                    ))}
+                  </div>
+                  <PB pct={Math.max(0,((24*3600-Math.max(0,Math.floor((tData.endTime-now)/1000)))/(24*3600))*100)} color="linear-gradient(90deg,#78350f,#fbbf24)" h={4}/>
+                </G>
+
+                {renderTournamentReward()}
+
+                <G>
+                  <SL>Live Leaderboard</SL>
+                  <div style={{display:"flex",flexDirection:"column",gap:4,marginTop:6,maxHeight:380,overflowY:"auto"}}>
+                    {allPlayers.slice(0,20).map((player,i)=>{
+                      const rank=i+1;const rc=rank<=3?"#fbbf24":rank<=10?"#94a3b8":rank<=25?"#fb923c":"rgba(255,255,255,0.5)";
+                      const r=gR(player.rarityId);
+                      return(
+                        <div key={player.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 9px",borderRadius:9,background:player.isPlayer?"rgba(99,102,241,0.15)":"rgba(255,255,255,0.02)",border:player.isPlayer?"1px solid rgba(99,102,241,0.4)":"1px solid transparent"}}>
+                          <div style={{width:26,textAlign:"center",fontFamily:"'Orbitron',sans-serif",fontSize:rank<=3?13:10,fontWeight:700,color:rc,flexShrink:0}}>{rank}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontWeight:player.isPlayer?700:400,fontSize:11,color:player.isPlayer?"#a78bfa":"#e2e8f0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{player.name}</div>
+                            <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}><span style={{color:r?.color}}>{r?.name}</span></div>
+                          </div>
+                          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#4ade80",flexShrink:0}}>{player.score}🥚</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {myRank>20&&<div style={{marginTop:6,padding:"6px 9px",borderRadius:9,background:"rgba(99,102,241,0.15)",border:"1px solid rgba(99,102,241,0.4)",display:"flex",alignItems:"center",gap:7}}>
+                    <div style={{width:26,textAlign:"center",fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#a78bfa"}}>#{myRank}</div>
+                    <div style={{flex:1,fontSize:11,color:"#a78bfa",fontWeight:700}}>You</div>
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,color:"#4ade80"}}>{myScore}🥚</div>
+                  </div>}
+                </G>
+              </>
+            )}
 
             {tData.endTime<=now&&(
               <G style={{textAlign:"center"}}><div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:7}}>Daily tournament ended!</div>
-                <button style={{...S.btn,background:"linear-gradient(135deg,#312e81,#6366f1)"}} onClick={()=>{setTData({opponents:GEN_OPP(),endTime:Date.now()+24*3600*1000,claimed:false});addFloat("🌅 New Daily!","#fbbf24");}}>Start New Daily</button>
+                <button style={{...S.btn,background:"linear-gradient(135deg,#312e81,#6366f1)"}} onClick={()=>{setTData({opponents:GEN_OPP(),endTime:Date.now()+24*3600*1000,claimed:false,joined:false});addFloat("New Daily!","#fbbf24");}}>Start New Daily</button>
               </G>
             )}
           </div>
@@ -2112,20 +2259,20 @@ export default function DuckFarm(){
         {tab==="league"&&leagueSubTab==="weekly"&&(()=>{
           const wEnded=weeklyTData.endTime<=now;
           const wOpp=weeklyTData.opponents;
-          const wAll=[...wOpp,{id:"me",name:"You",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true}].sort((a,b)=>b.score-a.score);
-          const wRank=wAll.findIndex(p=>p.isPlayer)+1;
+          const wAll=[...wOpp,...(weeklyTData.joined?[{id:"me",name:"You",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true}]:[])].sort((a,b)=>b.score-a.score);
+          const wRank=weeklyTData.joined?(wAll.findIndex(p=>p.isPlayer)+1):null;
           const wRew=WEEKLY_TREWARD(wRank);
           const wHasSeed=wRew.seeds&&(wRew.seeds.legendary+wRew.seeds.medium+wRew.seeds.basic)>0;
           const wSeedLabel=wRew.seeds?[wRew.seeds.legendary>0&&`${wRew.seeds.legendary}🌻`,wRew.seeds.medium>0&&`${wRew.seeds.medium}🌽`,wRew.seeds.basic>0&&`${wRew.seeds.basic}🌾`].filter(Boolean).join(" "):"";
           const wHasReward=wRew.mythic||wRew.duky>0||wRew.syr>0||wRew.med>0||wHasSeed;
           return(
           <div style={S.col}>
-            {/* Banner săptămânal */}
+            {/* Weekly banner — always visible */}
             <G style={{background:"linear-gradient(135deg,rgba(240,171,252,0.18),rgba(99,102,241,0.12))",borderColor:"rgba(240,171,252,0.5)",textAlign:"center"}} glow="#d946ef">
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:900,color:"#f0abfc",marginBottom:4}}>WEEKLY CHAMPIONSHIP</div>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.6,marginBottom:8}}>1st place wins a <b style={{color:"#f0abfc"}}>Mythic duck</b> 🦆✨</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.6,marginBottom:8}}>1st place wins a <b style={{color:"#f0abfc"}}>Mythic duck</b></div>
               <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-                {[["⏱ Time",wEnded?"ENDED":fT(Math.max(0,Math.floor((weeklyTData.endTime-now)/1000))),wEnded?"#ef4444":"#f0abfc"],["# Rank",`#${wRank}`,wRank===1?"#f0abfc":wRank<=3?"#fbbf24":"#e2e8f0"],["eggs/min",myScore,"#4ade80"]].map(([l,v,c])=>(
+                {[["⏱ Time",wEnded?"ENDED":fT(Math.max(0,Math.floor((weeklyTData.endTime-now)/1000))),wEnded?"#ef4444":"#f0abfc"],["# Rank",weeklyTData.joined?`#${wRank}`:"—",weeklyTData.joined&&wRank===1?"#f0abfc":weeklyTData.joined&&wRank<=3?"#fbbf24":"#e2e8f0"],["eggs/min",myScore,"#4ade80"]].map(([l,v,c])=>(
                   <div key={l} style={{background:"rgba(0,0,0,0.35)",borderRadius:10,padding:"7px 12px",textAlign:"center"}}>
                     <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>{l}</div>
                     <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:c}}>{v}</div>
@@ -2135,48 +2282,12 @@ export default function DuckFarm(){
               <div style={{marginTop:8}}><PB pct={Math.max(0,((7*24*3600-Math.max(0,Math.floor((weeklyTData.endTime-now)/1000)))/(7*24*3600))*100)} color="linear-gradient(90deg,#7c3aed,#f0abfc)" h={5}/></div>
             </G>
 
-            {/* Premiul jucătorului */}
-            <G style={{borderColor:`${wRew.color}44`,background:wRew.mythic?"linear-gradient(135deg,rgba(240,171,252,0.15),rgba(99,102,241,0.08))":` ${wRew.color}08`}}>
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:20,fontWeight:700,color:wRew.color}}>#{wRank}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:13,color:wRew.color}}>{wRew.label} — Rank #{wRank}</div>
-                  <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",lineHeight:1.8,marginTop:2}}>
-                    {wRew.mythic&&<span style={{color:"#f0abfc",fontWeight:700}}>Mythic Lvl1  </span>}
-                    {wRew.duky>0&&<span>{wRew.duky} DUKY  </span>}
-                    {wRew.syr>0&&<span>Syr×{wRew.syr}  </span>}
-                    {wRew.med>0&&<span>Med×{wRew.med}  </span>}
-                    {wHasSeed&&<span>{wSeedLabel}</span>}
-                  </div>
-                </div>
-                {wEnded&&!weeklyTData.claimed&&wHasReward&&(
-                  <button style={{...S.btn,background:`linear-gradient(135deg,#4c1d95,${wRew.color})`}} onClick={()=>{
-                    if(wRew.mythic){
-                      const nid="d"+nextId;
-                      const nb={id:nid,rid:"mythic",bid:gBreed("mythic")||"cosmic",lvl:1,xp:0,tired:false,lvlUpAt:null,miningUntil:null,breedCdUntil:null,nickname:"Champion"};
-                      setDucks(d=>[...d,nb]);setNextId(n=>n+1);
-                      if(ducks.length>=slots)setSlots(s=>s+1);
-                      addFloat("🦆✨ MYTHIC DUCK!","#f0abfc");
-                    }
-                    if(wRew.duky>0){setDuky(v=>+(v+wRew.duky).toFixed(4));addFloat(`+${wRew.duky}💎`,"#f0abfc");}
-                    if(wRew.syr>0){setSyringes(s=>s+wRew.syr);addFloat(`+${wRew.syr}💉`,"#a78bfa");}
-                    if(wRew.med>0){setMeds(m=>({...m,recovery:(m.recovery||0)+wRew.med}));addFloat(`+${wRew.med}💊`,"#4ade80");}
-                    if(wHasSeed){setSeedInv(inv=>({...inv,legendary:(inv.legendary||0)+(wRew.seeds.legendary||0),medium:(inv.medium||0)+(wRew.seeds.medium||0),basic:(inv.basic||0)+(wRew.seeds.basic||0)}));addFloat(`🌱 ${wSeedLabel}`,"#4ade80");}
-                    setWeeklyTData(t=>({...t,claimed:true}));
-                    addFloat(`🏆 Weekly Rank ${wRank}!`,"#fbbf24");
-                  }}>Claim</button>
-                )}
-                {weeklyTData.claimed&&<B color="#4ade80" size={10}>Done</B>}
-                {!wEnded&&<div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>At end</div>}
-              </div>
-            </G>
-
-            {/* Tabel premii săptămânale */}
+            {/* Weekly prizes — always visible */}
             <G style={{borderColor:"rgba(240,171,252,0.2)"}}>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#f0abfc",marginBottom:8,letterSpacing:1}}>WEEKLY PRIZES</div>
               <div style={{display:"flex",flexDirection:"column",gap:3}}>
                 {WEEKLY_PRIZE_TABLE.map((row,i)=>{
-                  const isMyTier=(wRank===1&&i===0)||(wRank<=3&&wRank>1&&i===1)||(wRank<=10&&wRank>3&&i===2)||(wRank<=25&&wRank>10&&i===3)||(wRank<=50&&wRank>25&&i===4)||(wRank>50&&i===5);
+                  const isMyTier=weeklyTData.joined&&((wRank===1&&i===0)||(wRank<=3&&wRank>1&&i===1)||(wRank<=10&&wRank>3&&i===2)||(wRank<=25&&wRank>10&&i===3)||(wRank<=50&&wRank>25&&i===4)||(wRank>50&&i===5));
                   return(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 8px",borderRadius:8,background:isMyTier?`${row.color}18`:"rgba(255,255,255,0.02)",border:`1px solid ${isMyTier?row.color:"rgba(240,171,252,0.1)"}`}}>
                       <div style={{fontSize:13,flexShrink:0}}>{row.icon}</div>
@@ -2195,35 +2306,89 @@ export default function DuckFarm(){
               </div>
             </G>
 
-            {/* Leaderboard săptămânal */}
-            <G>
-              <SL>Weekly Leaderboard</SL>
-              <div style={{display:"flex",flexDirection:"column",gap:4,marginTop:6,maxHeight:380,overflowY:"auto"}}>
-                {wAll.slice(0,20).map((player,i)=>{
-                  const rank=i+1;const rc=rank===1?"#f0abfc":rank<=3?"#fbbf24":rank<=10?"#94a3b8":"rgba(255,255,255,0.5)";
-                  const r=gR(player.rarityId);
-                  return(
-                    <div key={player.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 9px",borderRadius:9,background:player.isPlayer?"rgba(240,171,252,0.12)":"rgba(255,255,255,0.02)",border:player.isPlayer?"1px solid rgba(240,171,252,0.4)":"1px solid transparent"}}>
-                      <div style={{width:26,textAlign:"center",fontFamily:"'Orbitron',sans-serif",fontSize:rank<=3?13:10,fontWeight:700,color:rc,flexShrink:0}}>{rank}</div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:player.isPlayer?700:400,fontSize:11,color:player.isPlayer?"#f0abfc":"#e2e8f0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{player.name}</div>
-                        <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}><span style={{color:r?.color}}>{r?.name}</span></div>
+            {!weeklyTData.joined?(
+              /* Join card */
+              <G style={{background:"linear-gradient(135deg,rgba(240,171,252,0.15),rgba(99,102,241,0.1))",borderColor:"rgba(240,171,252,0.45)",textAlign:"center"}} glow="#d946ef">
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:900,color:"#f0abfc",marginBottom:6}}>WEEKLY CHAMPIONSHIP</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.7,marginBottom:10}}>
+                  7-day competition against {weeklyTData.opponents.length} rivals.<br/>
+                  1st place wins a <b style={{color:"#f0abfc"}}>Mythic duck</b> + massive DUKY!<br/>
+                  <span style={{color:"rgba(255,255,255,0.3)",fontSize:10}}>Time left: {fT(Math.max(0,Math.floor((weeklyTData.endTime-now)/1000)))}</span>
+                </div>
+                <button style={{...S.btn,background:"linear-gradient(135deg,#4c1d95,#d946ef)",fontSize:13,padding:"10px 28px"}}
+                  onClick={()=>{setWeeklyTData(t=>({...t,joined:true}));addFloat("Joined weekly!","#f0abfc");}}>
+                  Join Championship
+                </button>
+              </G>
+            ):(
+              <>
+                {/* Player reward card */}
+                <G style={{borderColor:`${wRew.color}44`,background:wRew.mythic?"linear-gradient(135deg,rgba(240,171,252,0.15),rgba(99,102,241,0.08))":` ${wRew.color}08`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:20,fontWeight:700,color:wRew.color}}>#{wRank}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,fontSize:13,color:wRew.color}}>{wRew.label} — Rank #{wRank}</div>
+                      <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",lineHeight:1.8,marginTop:2}}>
+                        {wRew.mythic&&<span style={{color:"#f0abfc",fontWeight:700}}>Mythic Lvl1  </span>}
+                        {wRew.duky>0&&<span>{wRew.duky} DUKY  </span>}
+                        {wRew.syr>0&&<span>Syr×{wRew.syr}  </span>}
+                        {wRew.med>0&&<span>Med×{wRew.med}  </span>}
+                        {wHasSeed&&<span>{wSeedLabel}</span>}
                       </div>
-                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#4ade80",flexShrink:0}}>{player.score}🥚</div>
                     </div>
-                  );
-                })}
-              </div>
-              {wRank>20&&<div style={{marginTop:6,padding:"6px 9px",borderRadius:9,background:"rgba(240,171,252,0.12)",border:"1px solid rgba(240,171,252,0.4)",display:"flex",alignItems:"center",gap:7}}>
-                <div style={{width:26,textAlign:"center",fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#f0abfc"}}>#{wRank}</div>
-                <div style={{flex:1,fontSize:11,color:"#f0abfc",fontWeight:700}}>You</div>
-                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,color:"#4ade80"}}>{myScore}🥚</div>
-              </div>}
-            </G>
+                    {wEnded&&!weeklyTData.claimed&&wHasReward&&(
+                      <button style={{...S.btn,background:`linear-gradient(135deg,#4c1d95,${wRew.color})`}} onClick={()=>{
+                        if(wRew.mythic){
+                          const nid="d"+nextId;
+                          const nb={id:nid,rid:"mythic",bid:gBreed("mythic")||"cosmic",lvl:1,xp:0,tired:false,lvlUpAt:null,miningUntil:null,breedCdUntil:null,nickname:"Champion"};
+                          setDucks(d=>[...d,nb]);setNextId(n=>n+1);
+                          if(ducks.length>=slots)setSlots(s=>s+1);
+                          addFloat("MYTHIC DUCK!","#f0abfc");
+                        }
+                        if(wRew.duky>0){setDuky(v=>+(v+wRew.duky).toFixed(4));addFloat(`+${wRew.duky}💎`,"#f0abfc");}
+                        if(wRew.syr>0){setSyringes(s=>s+wRew.syr);addFloat(`+${wRew.syr}💉`,"#a78bfa");}
+                        if(wRew.med>0){setMeds(m=>({...m,recovery:(m.recovery||0)+wRew.med}));addFloat(`+${wRew.med}💊`,"#4ade80");}
+                        if(wHasSeed){setSeedInv(inv=>({...inv,legendary:(inv.legendary||0)+(wRew.seeds.legendary||0),medium:(inv.medium||0)+(wRew.seeds.medium||0),basic:(inv.basic||0)+(wRew.seeds.basic||0)}));addFloat(`${wSeedLabel}`,"#4ade80");}
+                        setWeeklyTData(t=>({...t,claimed:true}));
+                        addFloat(`Weekly Rank ${wRank}!`,"#fbbf24");
+                      }}>Claim</button>
+                    )}
+                    {weeklyTData.claimed&&<B color="#4ade80" size={10}>Done</B>}
+                    {!wEnded&&<div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>At end</div>}
+                  </div>
+                </G>
+
+                {/* Weekly leaderboard */}
+                <G>
+                  <SL>Weekly Leaderboard</SL>
+                  <div style={{display:"flex",flexDirection:"column",gap:4,marginTop:6,maxHeight:380,overflowY:"auto"}}>
+                    {wAll.slice(0,20).map((player,i)=>{
+                      const rank=i+1;const rc=rank===1?"#f0abfc":rank<=3?"#fbbf24":rank<=10?"#94a3b8":"rgba(255,255,255,0.5)";
+                      const r=gR(player.rarityId);
+                      return(
+                        <div key={player.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 9px",borderRadius:9,background:player.isPlayer?"rgba(240,171,252,0.12)":"rgba(255,255,255,0.02)",border:player.isPlayer?"1px solid rgba(240,171,252,0.4)":"1px solid transparent"}}>
+                          <div style={{width:26,textAlign:"center",fontFamily:"'Orbitron',sans-serif",fontSize:rank<=3?13:10,fontWeight:700,color:rc,flexShrink:0}}>{rank}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontWeight:player.isPlayer?700:400,fontSize:11,color:player.isPlayer?"#f0abfc":"#e2e8f0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{player.name}</div>
+                            <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}><span style={{color:r?.color}}>{r?.name}</span></div>
+                          </div>
+                          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#4ade80",flexShrink:0}}>{player.score}🥚</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {wRank>20&&<div style={{marginTop:6,padding:"6px 9px",borderRadius:9,background:"rgba(240,171,252,0.12)",border:"1px solid rgba(240,171,252,0.4)",display:"flex",alignItems:"center",gap:7}}>
+                    <div style={{width:26,textAlign:"center",fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#f0abfc"}}>#{wRank}</div>
+                    <div style={{flex:1,fontSize:11,color:"#f0abfc",fontWeight:700}}>You</div>
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,color:"#4ade80"}}>{myScore}🥚</div>
+                  </div>}
+                </G>
+              </>
+            )}
 
             {wEnded&&(
               <G style={{textAlign:"center"}}><div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:7}}>Weekly tournament ended!</div>
-                <button style={{...S.btn,background:"linear-gradient(135deg,#4c1d95,#f0abfc)"}} onClick={()=>{setWeeklyTData({opponents:GEN_WEEKLY_OPP(),endTime:Date.now()+7*24*3600*1000,claimed:false});addFloat("🏆 New Weekly!","#f0abfc");}}>Start New Weekly</button>
+                <button style={{...S.btn,background:"linear-gradient(135deg,#4c1d95,#f0abfc)"}} onClick={()=>{setWeeklyTData({opponents:GEN_WEEKLY_OPP(),endTime:Date.now()+7*24*3600*1000,claimed:false,joined:false});addFloat("New Weekly!","#f0abfc");}}>Start New Weekly</button>
               </G>
             )}
           </div>

@@ -16,3 +16,6 @@ body{background:#07071a;margin:0;padding:0;}
 @keyframes hotGlow{0%,100%{opacity:0.65;filter:brightness(1)}50%{opacity:1;filter:brightness(1.3)}}
 @keyframes bidFlash{0%{background:rgba(74,222,128,0.25)}100%{background:transparent}}
 @keyframes scanLine{0%{top:-20%}100%{top:120%}}
+@keyframes spherePulse{0%,100%{box-shadow:0 0 35px #6366f1aa,0 8px 30px rgba(0,0,0,0.6),inset 0 6px 14px rgba(255,255,255,0.22)}50%{box-shadow:0 0 65px #a78bfacc,0 8px 40px rgba(0,0,0,0.6),inset 0 6px 20px rgba(255,255,255,0.32)}}
+@keyframes sphereSpin{0%{transform:rotate(0deg) scale(1);filter:brightness(1)}30%{transform:rotate(180deg) scale(1.18);filter:brightness(1.6)}60%{transform:rotate(450deg) scale(1.25);filter:brightness(2)}80%{transform:rotate(630deg) scale(1.1);filter:brightness(1.3)}100%{transform:rotate(720deg) scale(1);filter:brightness(1)}}
+@keyframes spherePop{0%{transform:scale(1);opacity:1}40%{transform:scale(1.35);opacity:1}100%{transform:scale(0.1);opacity:0}}

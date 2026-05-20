@@ -33,8 +33,8 @@ export function useGameState() {
   const[socialClaimed,setSocialClaimed]=useState(()=>JSON.parse(localStorage.getItem("duky_socialClaimed"))||{instagram:false,youtube:false,twitter:false,tiktok:false});
   const[nextId,   setNextId]   =useState(()=>Number(localStorage.getItem("duky_nextId"))||100);
   const[taskClaimed,setTaskClaimed]=useState(()=>JSON.parse(localStorage.getItem("duky_taskClaimed"))||{});
-  const[tData,       setTData]      =useState(()=>({opponents:GEN_OPP(),endTime:Date.now()+24*3600*1000,claimed:false}));
-  const[weeklyTData, setWeeklyTData]=useState(()=>({opponents:GEN_WEEKLY_OPP(),endTime:Date.now()+7*24*3600*1000,claimed:false}));
+  const[tData,       setTData]      =useState(()=>({opponents:GEN_OPP(),endTime:Date.now()+24*3600*1000,claimed:false,joined:false}));
+  const[weeklyTData, setWeeklyTData]=useState(()=>({opponents:GEN_WEEKLY_OPP(),endTime:Date.now()+7*24*3600*1000,claimed:false,joined:false}));
   const[achieved, setAchieved] =useState(()=>JSON.parse(localStorage.getItem("duky_achieved"))||{});
   const[mineCount,setMineCount]=useState(()=>Number(localStorage.getItem("duky_mineCount"))||0);
   const[loginStreak,   setLoginStreak]   =useState(()=>Number(localStorage.getItem("duky_streak"))||0);
@@ -42,6 +42,7 @@ export function useGameState() {
   const[offlineEarnings,setOfflineEarnings]=useState(null);
   const[adCoinsToday,  setAdCoinsToday]  =useState(()=>Number(localStorage.getItem("duky_adCoinsToday"))||0);
   const[adSyrToday,    setAdSyrToday]    =useState(()=>Number(localStorage.getItem("duky_adSyrToday"))||0);
+  const[spinUsedToday, setSpinUsedToday]=useState(()=>localStorage.getItem("duky_spinDate")===new Date().toDateString());
   const[miningBoostUntil,setMiningBoostUntil]=useState(()=>Number(localStorage.getItem("duky_miningBoostUntil"))||0);
   // Timers and actions
   const[cooking,  setCooking]  =useState(()=>{
@@ -195,6 +196,7 @@ export function useGameState() {
       setCompletionBonusClaimed(false);
       setMineSkips(0); setBreedSkips(0); setBreedCdSkips(0); setLvlSkips(0);
       setDucks(d=>d.map(dk=>({...dk,feedCountToday:0})));
+      setSpinUsedToday(false);
     }
     // --- Offline Earnings ---
     const lastActive=Number(localStorage.getItem("duky_lastActive"))||0;
@@ -464,7 +466,7 @@ export function useGameState() {
     feedDuck, startBreeding, plantSeed, harvestPlot, sendMining, claimMining, buySlot, handleUseMed,
     skipMining, skipBreeding, skipBreedCd, mineSkips, breedSkips, breedCdSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
-    adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday,
+    adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday, spinUsedToday, setSpinUsedToday,
     miningBoostUntil, setMiningBoostUntil,
     completionBonusClaimed, setCompletionBonusClaimed,
     lvlPass, buyLvlPass,

@@ -4,7 +4,7 @@ import {
   BREEDS, RARITIES, DUKY_R, SEEDS, TIER_COLORS, RECIPES, MEDS, UPGRADES,
   SLOT_COSTS, SYR_COST, MAX_TAPS, MAX_WATER, MAX_ADS, MAX_MINE, MINE_SECS, CD_SECS,
   gR, gNR, gL, gLExtended, gLC, gBreed, fD, fT, GEN_OPP, GEN_WEEKLY_OPP, TREWARD, WEEKLY_TREWARD, ACHIEVEMENTS_TPL, STREAK_REWARDS, PRIZE_TABLE, WEEKLY_PRIZE_TABLE,
-  COIN_PACKS, HATCH_EGGS, MAX_AD_COINS, MAX_AD_SYR, LVL_PASS_COST, RARITY_FEED_ADD
+  COIN_PACKS, HATCH_EGGS, MYSTERY_EGGS, MAX_AD_COINS, MAX_AD_SYR, LVL_PASS_COST, RARITY_FEED_ADD
 } from './constants';
 import { S } from './styles';
 import { Duck, G, B, PB, SL, Row } from './components';
@@ -125,6 +125,7 @@ export default function DuckFarm(){
   const [labTab,      setLabTab]      = useState("breed");
   const [shopTab,     setShopTab]     = useState("store");
   const [showInventory,setShowInventory]=useState(false);
+  const [eggResult,setEggResult]=useState(null);
   const [showSpin,    setShowSpin]    =useState(false);
   const [spinning,    setSpinning]    =useState(false);
   const [spinResult,  setSpinResult]  =useState(null);
@@ -279,38 +280,38 @@ export default function DuckFarm(){
   const prevLvlsRef=useRef({});
   const mineTimersRef=useRef({});
 
-  const scheduleNotif=useCallback(async(duckId,duckName,miningUntil)=>{
+  // Register service worker for background notifications
+  useEffect(()=>{
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/sw.js').catch(()=>{});
+    }
+  },[]);
+
+  const _postToSW=useCallback(async(msg)=>{
+    if(!('serviceWorker' in navigator))return;
+    try{ const reg=await navigator.serviceWorker.ready; if(reg.active)reg.active.postMessage(msg); }catch(e){}
+  },[]);
+
+  const scheduleNotif=useCallback(async(id,title,body,delayMs)=>{
     if(!('Notification' in window)||Notification.permission==='denied')return;
     if(Notification.permission==='default'){
       const p=await Notification.requestPermission();
       if(p!=='granted')return;
     }
-    if(mineTimersRef.current[duckId])clearTimeout(mineTimersRef.current[duckId]);
-    const delay=miningUntil-Date.now();
-    if(delay<=0)return;
-    mineTimersRef.current[duckId]=setTimeout(()=>{
-      new Notification('⛏️ Mining Complete!',{
-        body:`${duckName} finished mining! Open DuckFarm to claim your DUKY. 🎉`,
-        icon:'/gangster.png'
-      });
-      delete mineTimersRef.current[duckId];
-    },delay);
-  },[]);
+    _postToSW({type:'SCHEDULE',id,title,body,delay:Math.max(0,delayMs)});
+  },[_postToSW]);
 
+  const cancelNotif=useCallback((id)=>{_postToSW({type:'CANCEL',id});},[_postToSW]);
+
+  // Re-schedule mining notifications on load (after page refresh)
   useEffect(()=>{
     if(!('Notification' in window)||Notification.permission!=='granted')return;
     ducks.forEach(d=>{
       if(d.miningUntil&&d.miningUntil>Date.now()){
-        const name=d.nickname||gR(d.rid)?.name||d.id;
-        if(mineTimersRef.current[d.id])clearTimeout(mineTimersRef.current[d.id]);
-        const delay=d.miningUntil-Date.now();
-        mineTimersRef.current[d.id]=setTimeout(()=>{
-          new Notification('⛏️ Mining Complete!',{body:`${name} finished mining! Claim your DUKY.`,icon:'/gangster.png'});
-          delete mineTimersRef.current[d.id];
-        },delay);
+        const name=d.nickname||gR(d.rid)?.name||'Duck';
+        scheduleNotif('mine_'+d.id,'Mining Complete!',`${name} finished mining! Claim your DUKY.`,d.miningUntil-Date.now());
       }
     });
-    return()=>{Object.values(mineTimersRef.current).forEach(clearTimeout);};
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
@@ -1262,13 +1263,13 @@ export default function DuckFarm(){
                             )}
                             {duck.lvl>=7&&!duck.tired&&!mining&&!mDone&&miningCount<MAX_MINE&&!isBreeding&&(
                               <button style={{flex:1,minWidth:80,background:"linear-gradient(135deg,#4c1d95,#7c3aed)",border:"1px solid rgba(167,139,250,0.4)",borderRadius:13,padding:"10px 8px",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif",boxShadow:"0 2px 12px rgba(124,58,237,0.3)",transition:"all .2s"}}
-                                onClick={()=>{sendMining(duck.id);scheduleNotif(duck.id,duck.nickname||r.name,Date.now()+MINE_SECS*1000);}}>
+                                onClick={()=>{sendMining(duck.id);scheduleNotif('mine_'+duck.id,'Mining Complete!',`${duck.nickname||r.name} finished mining! Claim your DUKY.`,MINE_SECS*1000);}}>
                                 Mine<br/><span style={{fontSize:9,opacity:0.8}}>2h trip</span>
                               </button>
                             )}
                             {mDone&&(
                               <button style={{flex:1,minWidth:80,background:"linear-gradient(135deg,#78350f,#fbbf24)",border:"1px solid rgba(251,191,36,0.5)",borderRadius:13,padding:"10px 8px",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif",boxShadow:"0 2px 16px rgba(251,191,36,0.35)",animation:"winPulse 2s infinite"}}
-                                onClick={()=>claimMining(duck.id)}>
+                                onClick={()=>{claimMining(duck.id);cancelNotif('mine_'+duck.id);}}>
                                 Claim<br/><span style={{fontSize:9,opacity:0.8}}>DUKY ready</span>
                               </button>
                             )}
@@ -1653,7 +1654,7 @@ export default function DuckFarm(){
                       <div style={{fontSize:10,color:tc,fontWeight:700}}><CI/> +{recipe.coins} Coins</div>
                     </div>
                     <button style={{...S.btn,background:can?`linear-gradient(135deg,#ea580c,${tc})`:"rgba(99,102,241,0.1)",opacity:can?1:0.4}}
-                      onClick={()=>{if(!can)return;setEggs(e=>e-recipe.eggs);setCooking(prev=>[...prev,{...recipe,endsAt:Date.now()+recipe.time*1000}]);addFloat(`-${recipe.eggs.toLocaleString()}🥚`,"#ef4444");}}>Cook</button>
+                      onClick={()=>{if(!can)return;const slotId='cook_'+recipe.id+'_'+Date.now();setEggs(e=>e-recipe.eggs);setCooking(prev=>[...prev,{...recipe,endsAt:Date.now()+recipe.time*1000}]);addFloat(`-${recipe.eggs.toLocaleString()}🥚`,"#ef4444");scheduleNotif(slotId,'Kitchen Ready!',`${recipe.name} is ready! Collect your coins.`,recipe.time*1000);}}>Cook</button>
                   </div>
                 </G>
               );
@@ -1821,8 +1822,57 @@ export default function DuckFarm(){
                   </div>
                 );
               })}
-              {ducks.length>=slots&&<div style={{fontSize:9,color:"#ef4444",textAlign:"center",marginTop:3}}>⚠️ Cumpără un slot înainte de a hatch.</div>}
+              {ducks.length>=slots&&<div style={{fontSize:9,color:"#ef4444",textAlign:"center",marginTop:3}}>⚠️ Buy a slot before hatching.</div>}
             </G>
+
+            {/* === MYSTERY EGGS === */}
+            <G style={{borderColor:"rgba(251,191,36,0.3)",background:"rgba(251,191,36,0.04)"}}>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:"#fbbf24",marginBottom:2}}>MYSTERY EGGS</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:10}}>Random rarity — spin your luck!</div>
+              {MYSTERY_EGGS.map(egg=>{
+                const canAfford=egg.costType==="coins"?coins>=egg.cost:duky>=egg.cost;
+                const canHatch=canAfford&&ducks.length<slots;
+                const oddsText=egg.odds.map(o=>`${gR(o.rid)?.name} ${o.w}%`).join(' · ');
+                return(
+                  <div key={egg.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7,padding:"9px 10px",borderRadius:12,background:`${egg.color}09`,border:`1px solid ${egg.color}33`}}>
+                    <span style={{fontSize:26,flexShrink:0}}>{egg.emoji}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:700,fontSize:12,color:egg.color}}>{egg.name}</div>
+                      <div style={{fontSize:8,color:"rgba(255,255,255,0.35)",lineHeight:1.4}}>{oddsText}</div>
+                    </div>
+                    <button style={{...S.btn,background:canHatch?`linear-gradient(135deg,#78350f,${egg.color})`:"rgba(99,102,241,0.1)",opacity:canHatch?1:0.4,flexShrink:0,fontSize:10}}
+                      onClick={()=>{
+                        if(!canHatch)return;
+                        if(ducks.length>=slots){addFloat("No slots!","#ef4444");return;}
+                        const total=egg.odds.reduce((s,o)=>s+o.w,0);
+                        let rv=Math.random()*total; let rid=egg.odds[egg.odds.length-1].rid;
+                        for(const o of egg.odds){rv-=o.w;if(rv<=0){rid=o.rid;break;}}
+                        if(egg.costType==="coins")setCoins(c=>c-egg.cost);
+                        else setDuky(v=>+(v-egg.cost).toFixed(4));
+                        const nd={id:"d"+nextId,rid,bid:gBreed(rid),lvl:1,xp:0,tired:false,lvlUpAt:null,miningUntil:null,breedCdUntil:null,nickname:""};
+                        setNextId(n=>n+1);setDucks(d=>[...d,nd]);
+                        setEggResult({rid,color:gR(rid)?.color,name:gR(rid)?.name,egg:egg.emoji});
+                        addFloat(`${egg.emoji} ${gR(rid)?.name} Duck!`,gR(rid)?.color);
+                      }}>
+                      {egg.costType==="coins"?<><CI/>{egg.cost.toLocaleString()}</>:<><DI s={11}/>{egg.cost}</>}
+                    </button>
+                  </div>
+                );
+              })}
+              {ducks.length>=slots&&<div style={{fontSize:9,color:"#ef4444",textAlign:"center",marginTop:3}}>⚠️ Buy a slot before hatching.</div>}
+            </G>
+
+            {/* Egg result popup */}
+            {eggResult&&(
+              <div onClick={()=>setEggResult(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <div style={{textAlign:"center",padding:32}}>
+                  <div style={{fontSize:72,marginBottom:8,animation:"duckLvlup 0.8s ease-out"}}>{eggResult.egg}</div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:eggResult.color,marginBottom:6}}>{eggResult.name}!</div>
+                  <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginBottom:20}}>A new {eggResult.name} duck joined your farm!</div>
+                  <button onClick={()=>setEggResult(null)} style={{...S.btn,background:`linear-gradient(135deg,#166534,#4ade80)`,fontSize:13,padding:"12px 32px"}}>Go to Farm</button>
+                </div>
+              </div>
+            )}
 
             {/* === BOOSTURI PREMIUM === */}
             <G style={{borderColor:"rgba(251,146,60,0.3)",background:"rgba(251,146,60,0.04)"}}>

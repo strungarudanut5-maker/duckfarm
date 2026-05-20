@@ -179,6 +179,17 @@ export const HATCH_EGGS = [
   {rid:"legendary", name:"Legendary", emoji:"🔥", coins:40000, color:"#fb923c", desc:"Max DUKY mining rate"},
 ];
 
+export const MYSTERY_EGGS=[
+  {id:"basic",  name:"Basic Egg",   emoji:"🥚", cost:150,  costType:"coins", color:"#94a3b8",
+   desc:"Common or Rare surprise",   odds:[{rid:"common",w:70},{rid:"rare",w:28},{rid:"epic",w:2}]},
+  {id:"rare",   name:"Rare Egg",    emoji:"💎", cost:800,  costType:"coins", color:"#38bdf8",
+   desc:"Rare or better guaranteed", odds:[{rid:"rare",w:60},{rid:"epic",w:34},{rid:"legendary",w:6}]},
+  {id:"golden", name:"Golden Egg",  emoji:"🌟", cost:3000, costType:"coins", color:"#fbbf24",
+   desc:"Epic or Legendary duck",    odds:[{rid:"epic",w:55},{rid:"legendary",w:38},{rid:"mythic",w:7}]},
+  {id:"mythic", name:"Mythic Egg",  emoji:"👑", cost:8,    costType:"duky",  color:"#f0abfc",
+   desc:"Legendary or Mythic duck",  odds:[{rid:"legendary",w:65},{rid:"mythic",w:35}]},
+];
+
 export const MAX_AD_COINS = 15;
 export const MAX_AD_SYR   = 5;
 

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="cg" cx="38%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ffe87a"/>
+      <stop offset="45%" stop-color="#f5c518"/>
+      <stop offset="100%" stop-color="#a86800"/>
+    </radialGradient>
+    <radialGradient id="ig" cx="38%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#fff4a0"/>
+      <stop offset="55%" stop-color="#f0b800"/>
+      <stop offset="100%" stop-color="#7a4a00"/>
+    </radialGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#00000066"/>
+    </filter>
+  </defs>
+  <!-- Outer coin body -->
+  <circle cx="32" cy="32" r="30" fill="url(#cg)" filter="url(#sh)"/>
+  <!-- Rim highlight -->
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#ffe060" stroke-width="2.2" opacity="0.7"/>
+  <!-- Inner circle -->
+  <circle cx="32" cy="32" r="23" fill="url(#ig)"/>
+  <!-- Inner ring -->
+  <circle cx="32" cy="32" r="23" fill="none" stroke="#c88800" stroke-width="1.2" opacity="0.6"/>
+  <!-- Letter D -->
+  <text x="32" y="41" text-anchor="middle" font-family="Georgia,serif" font-size="24" font-weight="900"
+        fill="#7a4a00" opacity="0.25" letter-spacing="0">D</text>
+  <text x="32" y="40" text-anchor="middle" font-family="Georgia,serif" font-size="24" font-weight="900"
+        fill="#5a3200" letter-spacing="0">D</text>
+  <!-- Top shine -->
+  <ellipse cx="25" cy="20" rx="8" ry="4.5" fill="white" opacity="0.28" transform="rotate(-20,25,20)"/>
+</svg>

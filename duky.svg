@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" width="64" height="80">
+  <defs>
+    <radialGradient id="eg" cx="38%" cy="32%" r="70%">
+      <stop offset="0%" stop-color="#a5f3fc"/>
+      <stop offset="45%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </radialGradient>
+    <radialGradient id="ig" cx="38%" cy="32%" r="70%">
+      <stop offset="0%" stop-color="#bfdbfe"/>
+      <stop offset="60%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1e40af"/>
+    </radialGradient>
+    <filter id="sh" x="-20%" y="-15%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#00000077"/>
+    </filter>
+  </defs>
+  <!-- Egg body -->
+  <ellipse cx="32" cy="44" rx="26" ry="32" fill="url(#eg)" filter="url(#sh)"/>
+  <!-- Rim highlight -->
+  <ellipse cx="32" cy="44" rx="26" ry="32" fill="none" stroke="#93c5fd" stroke-width="1.5" opacity="0.6"/>
+  <!-- Inner glow circle -->
+  <ellipse cx="32" cy="44" rx="20" ry="25" fill="url(#ig)" opacity="0.5"/>
+  <!-- $ sign -->
+  <text x="32" y="54" text-anchor="middle" font-family="Georgia,serif" font-size="32" font-weight="900"
+        fill="#1e3a8a" opacity="0.3" letter-spacing="0">$</text>
+  <text x="32" y="53" text-anchor="middle" font-family="Georgia,serif" font-size="32" font-weight="900"
+        fill="#ffffff" letter-spacing="0">$</text>
+  <!-- Top shine -->
+  <ellipse cx="23" cy="26" rx="7" ry="4" fill="white" opacity="0.32" transform="rotate(-20,23,26)"/>
+</svg>

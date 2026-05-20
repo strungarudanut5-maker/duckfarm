@@ -4,7 +4,7 @@ import {
   BREEDS, RARITIES, DUKY_R, SEEDS, TIER_COLORS, RECIPES, MEDS, UPGRADES,
   SLOT_COSTS, SYR_COST, MAX_TAPS, MAX_WATER, MAX_ADS, MAX_MINE, MINE_SECS, CD_SECS,
   gR, gNR, gL, gLExtended, gLC, gBreed, fD, fT, GEN_OPP, GEN_WEEKLY_OPP, TREWARD, WEEKLY_TREWARD, ACHIEVEMENTS_TPL, STREAK_REWARDS, PRIZE_TABLE, WEEKLY_PRIZE_TABLE,
-  COIN_PACKS, HATCH_EGGS, MAX_AD_COINS, MAX_AD_SYR, LVL_PASS_COST
+  COIN_PACKS, HATCH_EGGS, MAX_AD_COINS, MAX_AD_SYR, LVL_PASS_COST, RARITY_FEED_ADD
 } from './constants';
 import { S } from './styles';
 import { Duck, G, B, PB, SL, Row } from './components';
@@ -1012,6 +1012,7 @@ export default function DuckFarm(){
                     const cdSecsLeft=onCd?Math.max(0,duck.lvlUpAt-Math.floor(now/1000)):0;
                     const cdPct=onCd?Math.min(100,((CD_SECS-cdSecsLeft)/CD_SECS)*100):0;
                     const tiredSecsLeft=duck.tired&&duck.tiredUntil?Math.max(0,Math.ceil((duck.tiredUntil-now)/1000)):0;
+                    const feedCost=(gLExtended(duck.lvl).fpf||2)+(RARITY_FEED_ADD[duck.rid]||0)+(duck.feedCountToday||0)*2;
                     const canFeed=!duck.tired&&!mining&&!mDone&&!onCd;
                     const lvlColor=gLC(Math.min(duck.lvl,7));
                     return (
@@ -1045,7 +1046,7 @@ export default function DuckFarm(){
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:12}}>
                             {[
                               {l:"eggs/min",v:((r?.eggRate||0)*(duck.tired?0.4:1)*mult*60).toFixed(2),c:"#fbbf24"},
-                              {l:"feed/lvl", v:gLExtended(duck.lvl).fpf||"MAX",c:"#4ade80"},
+                              {l:"feed/lvl", v:feedCost,c:"#4ade80"},
                               {l:"DUKY/lvl", v:fD(DUKY_R[duck.rid]||0.001),c:"#f0abfc"},
                             ].map(({l,v,c})=>(
                               <div key={l} style={{background:"rgba(0,0,0,0.35)",borderRadius:11,padding:"8px 5px",textAlign:"center",border:`1px solid ${c}18`}}>
@@ -1117,9 +1118,9 @@ export default function DuckFarm(){
                           {/* ── ACTION BUTTONS ── */}
                           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                             {canFeed&&(
-                              <button style={{flex:1,minWidth:80,background:feed>=gLExtended(duck.lvl).fpf?"linear-gradient(135deg,#14532d,#4ade80)":"rgba(74,222,128,0.08)",border:`1px solid ${feed>=gLExtended(duck.lvl).fpf?"#4ade8055":"rgba(74,222,128,0.15)"}`,borderRadius:13,padding:"10px 8px",color:feed>=gLExtended(duck.lvl).fpf?"#fff":"rgba(74,222,128,0.4)",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif",boxShadow:feed>=gLExtended(duck.lvl).fpf?"0 2px 12px rgba(74,222,128,0.25)":"none",transition:"all .2s"}}
+                              <button style={{flex:1,minWidth:80,background:feed>=feedCost?"linear-gradient(135deg,#14532d,#4ade80)":"rgba(74,222,128,0.08)",border:`1px solid ${feed>=feedCost?"#4ade8055":"rgba(74,222,128,0.15)"}`,borderRadius:13,padding:"10px 8px",color:feed>=feedCost?"#fff":"rgba(74,222,128,0.4)",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Exo 2',sans-serif",boxShadow:feed>=feedCost?"0 2px 12px rgba(74,222,128,0.25)":"none",transition:"all .2s"}}
                                 onClick={()=>{triggerAnim(duck.id,'feed');feedDuck(duck.id);}}>
-                                Feed<br/><span style={{fontSize:9,opacity:0.8}}>{gLExtended(duck.lvl).fpf} 🌾</span>
+                                Feed<br/><span style={{fontSize:9,opacity:0.8}}>{feedCost} 🌾</span>
                               </button>
                             )}
                             {duck.lvl>=7&&!duck.tired&&!mining&&!mDone&&miningCount<MAX_MINE&&!isBreeding&&(

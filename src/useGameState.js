@@ -3,7 +3,7 @@ import {
   DUKY_R, LVLS, SEEDS, UPGRADES, MEDS,
   MAX_MINE, MINE_SECS, CD_SECS, BREED_CD_SECS, RARITIES, SLOT_COSTS, SYR_COST, MAX_WATER, MAX_ADS,
   gR, gNR, gL, gLExtended, gLC, gBreed, GEN_OPP, GEN_WEEKLY_OPP, getDailyTasks, fD, fT, ACHIEVEMENTS_TPL, DUKY_R as D_REWARDS,
-  STREAK_REWARDS, MAX_AD_COINS, MAX_AD_SYR
+  STREAK_REWARDS, MAX_AD_COINS, MAX_AD_SYR, RARITY_FEED_ADD
 } from "./constants";
 
 export function useGameState() {
@@ -194,6 +194,7 @@ export function useGameState() {
       setDailyTasks(getDailyTasks()); setTaskClaimed({});
       setCompletionBonusClaimed(false);
       setMineSkips(0); setBreedSkips(0); setBreedCdSkips(0); setLvlSkips(0);
+      setDucks(d=>d.map(dk=>({...dk,feedCountToday:0})));
     }
     // --- Offline Earnings ---
     const lastActive=Number(localStorage.getItem("duky_lastActive"))||0;
@@ -280,7 +281,8 @@ export function useGameState() {
       return;
     }
     const ld = gLExtended(duck.lvl);
-    const fn = ld.fpf || 2;
+    const sessionCount = duck.feedCountToday || 0;
+    const fn = (ld.fpf || 2) + (RARITY_FEED_ADD[duck.rid] || 0) + sessionCount * 2;
     if (feed < fn) {
       addFloat(`Need ${fn}🌾`, "#ef4444");
       return;
@@ -296,11 +298,11 @@ export function useGameState() {
         setDuky(v => +(v + dg).toFixed(4));
         addFloat(`Lvl ${dk.lvl + 1}! +${fD(dg)} DUKY`, gLC(Math.min(dk.lvl + 1, 7)));
         progTask("levelup");
-        return { ...dk, lvl: dk.lvl + 1, xp: 0, lvlUpAt: Math.floor(Date.now() / 1000) + CD_SECS };
+        return { ...dk, lvl: dk.lvl + 1, xp: 0, lvlUpAt: Math.floor(Date.now() / 1000) + CD_SECS, feedCountToday: (dk.feedCountToday||0)+1 };
       }
       addFloat(`+10XP -${fn}🌾`, "#4ade80");
       progTask("feed");
-      return { ...dk, xp: nx };
+      return { ...dk, xp: nx, feedCountToday: (dk.feedCountToday||0)+1 };
     }));
   }, [ducks, feed, addFloat, progTask]);
 

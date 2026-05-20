@@ -62,6 +62,7 @@ export const SLOT_COSTS=[0,0,0,80,150,250,400,600];
 export const SYR_COST=15,MAX_TAPS=10000,MAX_WATER=30,MAX_ADS=10,MAX_MINE=4,MINE_SECS=7200,CD_SECS=7200,BREED_CD_SECS=7200;
 
 export const LVL_PASS_COST=100;
+export const RARITY_FEED_ADD={common:0,rare:3,epic:7,legendary:15,mythic:30};
 export const gR=id=>RARITIES.find(r=>r.id===id);
 export const gNR=id=>{const i=RARITIES.findIndex(r=>r.id===id);return i>=0&&i<4?RARITIES[i+1]:null;};
 export const gL=lvl=>LVLS[Math.min(lvl-1,6)];

@@ -2,7 +2,6 @@
   "name": "duck-farm-game",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://strungarudanut5-maker.github.io/duckfarm",
   "dependencies": {
     "@telegram-apps/sdk": "^3.11.8",
     "firebase": "^12.13.0",

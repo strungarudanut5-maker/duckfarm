@@ -131,6 +131,7 @@ export default function DuckFarm(){
   const [showSpin,    setShowSpin]    =useState(false);
   const [spinning,    setSpinning]    =useState(false);
   const [spinResult,  setSpinResult]  =useState(null);
+  const [stakeInput,  setStakeInput]  =useState("");
   const wheelRef=useRef(null);
   const rafRef=useRef(null);
   const wheelAngleRef=useRef(0);
@@ -2568,7 +2569,6 @@ export default function DuckFarm(){
                     if(stakedDays>30)return 2;
                     return 1.5;
                   })():null;
-                  const[stakeInput,setStakeInput]=React.useState("");
                   return(
                     <G style={{borderColor:"rgba(99,102,241,0.25)",background:"linear-gradient(135deg,rgba(30,20,80,0.4),rgba(10,10,28,0.85))"}}>
                       <div style={{fontWeight:700,fontSize:13,color:"#a78bfa",fontFamily:"'Orbitron',sans-serif",marginBottom:4}}>STAKE DUKY</div>

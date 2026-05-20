@@ -193,6 +193,7 @@ export function useGameState() {
       setAdCoinsToday(0); setAdSyrToday(0);
       setDailyTasks(getDailyTasks()); setTaskClaimed({});
       setCompletionBonusClaimed(false);
+      setMineSkips(0); setBreedSkips(0); setBreedCdSkips(0); setLvlSkips(0);
     }
     // --- Offline Earnings ---
     const lastActive=Number(localStorage.getItem("duky_lastActive"))||0;

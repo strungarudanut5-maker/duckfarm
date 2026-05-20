@@ -28,7 +28,7 @@ export function useGameState() {
   const[seedInv,  setSeedInv]  =useState(()=>JSON.parse(localStorage.getItem("duky_seeds"))||{basic:3,medium:0,legendary:0});
   const[upgrades, setUpgrades] =useState(()=>JSON.parse(localStorage.getItem("duky_upgrades"))||{nest:false,feed:false,pond:false});
   
-  // Meta stări
+  // Meta state
   const[adsToday, setAdsToday] =useState(()=>Number(localStorage.getItem("duky_ads"))||0);
   const[socialClaimed,setSocialClaimed]=useState(()=>JSON.parse(localStorage.getItem("duky_socialClaimed"))||{instagram:false,youtube:false,twitter:false,tiktok:false});
   const[nextId,   setNextId]   =useState(()=>Number(localStorage.getItem("duky_nextId"))||100);
@@ -43,7 +43,7 @@ export function useGameState() {
   const[adCoinsToday,  setAdCoinsToday]  =useState(()=>Number(localStorage.getItem("duky_adCoinsToday"))||0);
   const[adSyrToday,    setAdSyrToday]    =useState(()=>Number(localStorage.getItem("duky_adSyrToday"))||0);
   const[miningBoostUntil,setMiningBoostUntil]=useState(()=>Number(localStorage.getItem("duky_miningBoostUntil"))||0);
-  // Timer-e și acțiuni (Noi)
+  // Timers and actions
   const[cooking,  setCooking]  =useState(()=>{
     const saved=JSON.parse(localStorage.getItem("duky_cooking"));
     if(!saved)return[];
@@ -137,7 +137,7 @@ export function useGameState() {
 
   // --- EFFECTS ---
 
-  // Persistență LocalStorage
+  // LocalStorage persistence
   useEffect(() => {
     localStorage.setItem("duky_eggs", eggs);
     localStorage.setItem("duky_coins", coins);
@@ -232,7 +232,7 @@ export function useGameState() {
     }
   },[now]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Multiplicator și Producție
+  // Multiplier and production
   const mult=UPGRADES.filter(u=>upgrades[u.id]).reduce((a,u)=>a*u.mult,1);
   const eps=ducks.reduce((a,d)=>{
     const r=gR(d.rid);
@@ -243,7 +243,7 @@ export function useGameState() {
     return a+(r?.eggRate||0)*(d.tired?0.4:1)*lvlBonus;
   },0)*mult;
 
-  // Producție Ouă (0.1s pentru fluiditate)
+  // Egg production (0.1s tick for smoothness)
   useEffect(()=>{
     const iv=setInterval(()=>{
       const g=eps/10;
@@ -256,7 +256,7 @@ export function useGameState() {
     return()=>clearInterval(iv);
   },[eps]);
 
-  // Consum Hrană
+  // Feed consumption
   useEffect(()=>{
     const iv=setInterval(()=>{
       const rate=ducks.reduce((a,d)=>{

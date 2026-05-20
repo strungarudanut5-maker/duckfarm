@@ -194,7 +194,7 @@ export default function DuckFarm(){
     if(delay<=0)return;
     mineTimersRef.current[duckId]=setTimeout(()=>{
       new Notification('⛏️ Mining Complete!',{
-        body:`${duckName} a terminat! Deschide Duky să revendici DUKY. 🎉`,
+        body:`${duckName} finished mining! Open DuckFarm to claim your DUKY. 🎉`,
         icon:'/gangster.png'
       });
       delete mineTimersRef.current[duckId];
@@ -209,7 +209,7 @@ export default function DuckFarm(){
         if(mineTimersRef.current[d.id])clearTimeout(mineTimersRef.current[d.id]);
         const delay=d.miningUntil-Date.now();
         mineTimersRef.current[d.id]=setTimeout(()=>{
-          new Notification('⛏️ Mining Complete!',{body:`${name} a terminat! Revendică DUKY.`,icon:'/gangster.png'});
+          new Notification('⛏️ Mining Complete!',{body:`${name} finished mining! Claim your DUKY.`,icon:'/gangster.png'});
           delete mineTimersRef.current[d.id];
         },delay);
       }
@@ -244,11 +244,11 @@ export default function DuckFarm(){
     return () => clearTimeout(t);
   }, [adPlaying, adCountdown]);
 
-  // EPS și Mult sunt acum calculate în hook
+  // EPS and mult computed in hook
   const miningCount=ducks.filter(d=>d.miningUntil&&d.miningUntil>now).length;
   const tiredCount=ducks.filter(d=>d.tired).length;
   const myScore=+(eps*60).toFixed(2);
-  const allPlayers=[...tData.opponents,{id:"me",name:"Tu",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true}].sort((a,b)=>b.score-a.score);
+  const allPlayers=[...tData.opponents,{id:"me",name:"You",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true}].sort((a,b)=>b.score-a.score);
   const myRank=allPlayers.findIndex(p=>p.isPlayer)+1;
 
   useEffect(()=>{
@@ -837,23 +837,23 @@ export default function DuckFarm(){
           <div onClick={e=>e.stopPropagation()} style={{background:"rgba(7,7,26,0.98)",border:"1px solid rgba(99,102,241,0.35)",borderRadius:"24px 24px 0 0",padding:"20px 18px 30px",width:"100%",maxWidth:440,boxShadow:"0 0 60px rgba(99,102,241,0.2)",maxHeight:"80vh",overflowY:"auto"}}>
             {/* Header */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:900,color:"#a78bfa",letterSpacing:2}}>INVENTAR</div>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:900,color:"#a78bfa",letterSpacing:2}}>INVENTORY</div>
               <button onClick={()=>setShowInventory(false)} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:99,padding:"4px 13px",color:"rgba(255,255,255,0.6)",fontSize:13,cursor:"pointer"}}>✕</button>
             </div>
 
             {/* Syringes */}
-            <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>SERINGI</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>SYRINGES</div>
             <div style={{background:"rgba(167,139,250,0.07)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
               <div style={{fontSize:26}}>💉</div>
               <div style={{flex:1}}>
-                <div style={{fontWeight:700,fontSize:12,color:"#a78bfa"}}>Seringi</div>
-                <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>Necesare pentru breeding</div>
+                <div style={{fontWeight:700,fontSize:12,color:"#a78bfa"}}>Syringes</div>
+                <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>Required for breeding</div>
               </div>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:24,fontWeight:900,color:"#a78bfa"}}>{syringes}</div>
             </div>
 
             {/* Medicines */}
-            <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>MEDICAMENTE</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>MEDICINES</div>
             <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
 
               {/* Recovery Pill */}
@@ -862,9 +862,9 @@ export default function DuckFarm(){
                   <div style={{fontSize:24}}>💊</div>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:12,color:"#4ade80"}}>Recovery Pill</div>
-                    <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>Vindecă oboseala instant</div>
-                    {!(meds.recovery>0)&&<div style={{fontSize:9,color:"rgba(255,255,255,0.2)",marginTop:2}}>Nu ai în inventar</div>}
-                    {meds.recovery>0&&!ducks.some(d=>d.tired)&&<div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:2}}>Nicio rată obosită</div>}
+                    <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>Instantly heals fatigue</div>
+                    {!(meds.recovery>0)&&<div style={{fontSize:9,color:"rgba(255,255,255,0.2)",marginTop:2}}>Not in inventory</div>}
+                    {meds.recovery>0&&!ducks.some(d=>d.tired)&&<div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:2}}>No tired ducks</div>}
                   </div>
                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:meds.recovery>0?"#4ade80":"rgba(74,222,128,0.3)"}}>{meds.recovery||0}</div>
                 </div>
@@ -876,7 +876,7 @@ export default function DuckFarm(){
                       return(
                         <div key={d.id} style={{display:"flex",alignItems:"center",gap:8,background:"rgba(74,222,128,0.06)",borderRadius:10,padding:"6px 10px"}}>
                           <div style={{fontSize:10,color:"rgba(255,255,255,0.5)"}}>{d.nickname||r.name}</div>
-                          <div style={{flex:1,fontSize:9,color:"rgba(255,255,255,0.3)"}}>Lvl {d.lvl} · recuperare {fT(sLeft)}</div>
+                          <div style={{flex:1,fontSize:9,color:"rgba(255,255,255,0.3)"}}>Lvl {d.lvl} · recovers in {fT(sLeft)}</div>
                           <button style={{background:"linear-gradient(135deg,#14532d,#4ade80)",border:"none",borderRadius:8,padding:"5px 12px",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}
                             onClick={()=>handleUseMed(d.id,"recovery")}>Heal</button>
                         </div>
@@ -891,17 +891,17 @@ export default function DuckFarm(){
                 <div style={{fontSize:24}}>⚡</div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:12,color:"#fbbf24"}}>Breeding Boost</div>
-                  <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>×2 șansă la breeding</div>
-                  {breedBoost&&<div style={{fontSize:9,color:"#fbbf24",marginTop:2,fontWeight:700}}>ACTIV pentru urmatorul breeding</div>}
-                  {!(meds.breedboost>0)&&!breedBoost&&<div style={{fontSize:9,color:"rgba(255,255,255,0.2)",marginTop:2}}>Nu ai în inventar</div>}
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>×2 breeding chance</div>
+                  {breedBoost&&<div style={{fontSize:9,color:"#fbbf24",marginTop:2,fontWeight:700}}>ACTIVE for next breeding</div>}
+                  {!(meds.breedboost>0)&&!breedBoost&&<div style={{fontSize:9,color:"rgba(255,255,255,0.2)",marginTop:2}}>Not in inventory</div>}
                 </div>
                 {breedBoost?(
-                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:900,color:"#fbbf24",padding:"4px 8px",border:"1px solid rgba(251,191,36,0.4)",borderRadius:8}}>ACTIV</div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:900,color:"#fbbf24",padding:"4px 8px",border:"1px solid rgba(251,191,36,0.4)",borderRadius:8}}>ACTIVE</div>
                 ):meds.breedboost>0?(
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:"#fbbf24"}}>{meds.breedboost}</div>
                     <button style={{background:"linear-gradient(135deg,#78350f,#fbbf24)",border:"none",borderRadius:8,padding:"5px 12px",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}
-                      onClick={()=>handleUseMed("_","breedboost")}>Activează</button>
+                      onClick={()=>handleUseMed("_","breedboost")}>Activate</button>
                   </div>
                 ):(
                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:"rgba(251,191,36,0.25)"}}>0</div>
@@ -912,14 +912,14 @@ export default function DuckFarm(){
             {/* Active Boosts */}
             {(miningBoostUntil>now||breedBoost)&&(
               <>
-                <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>BOOST-URI ACTIVE</div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>ACTIVE BOOSTS</div>
                 <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
                   {miningBoostUntil>now&&(
                     <div style={{background:"rgba(240,171,252,0.06)",border:"1px solid rgba(240,171,252,0.25)",borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
                       <div style={{fontSize:24}}>⛏️</div>
                       <div style={{flex:1}}>
                         <div style={{fontWeight:700,fontSize:12,color:"#f0abfc"}}>Mining Boost ×2</div>
-                        <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>Dubleaza DUKY din mining</div>
+                        <div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>Doubles DUKY from mining</div>
                       </div>
                       <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:900,color:"#f0abfc"}}>{fT(Math.ceil((miningBoostUntil-now)/1000))}</div>
                     </div>
@@ -928,21 +928,6 @@ export default function DuckFarm(){
               </>
             )}
 
-            {/* Skip tickets summary */}
-            {(mineSkips+breedSkips+breedCdSkips+lvlSkips)>0&&(
-              <>
-                <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginBottom:7}}>SKIP-URI FOLOSITE</div>
-                <div style={{background:"rgba(99,102,241,0.06)",border:"1px solid rgba(99,102,241,0.15)",borderRadius:14,padding:"10px 14px",display:"flex",flexWrap:"wrap",gap:12}}>
-                  {[["⛏️ Mine",mineSkips,(mineSkips+1)*10],["🧬 Breed",breedSkips,(breedSkips+1)*10],["⏳ CD",breedCdSkips,(breedCdSkips+1)*10],["⭐ Lvl",lvlSkips,(lvlSkips+1)*10]].map(([lb,n,next])=>(
-                    <div key={lb} style={{textAlign:"center"}}>
-                      <div style={{fontSize:10,color:"rgba(255,255,255,0.5)"}}>{lb}</div>
-                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:"#6366f1"}}>{n}x</div>
-                      <div style={{fontSize:8,color:"rgba(255,255,255,0.25)"}}>next: {next}🪙</div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
@@ -2025,7 +2010,7 @@ export default function DuckFarm(){
         {/* ═══ LEAGUE + PROFIL ═══ */}
         {tab==="league"&&(
           <div style={{display:"flex",gap:7,padding:"0 0 8px"}}>
-            {[["daily","Zilnic"],["weekly","Săptămânal"],["profile","Profile"]].map(([lt,lb])=>(
+            {[["daily","Daily"],["weekly","Weekly"],["profile","Profile"]].map(([lt,lb])=>(
               <button key={lt} style={{...S.subTab,...(leagueSubTab===lt?S.subOn:{})}} onClick={()=>setLeagueSubTab(lt)}>{lb}</button>
             ))}
           </div>
@@ -2037,16 +2022,16 @@ export default function DuckFarm(){
             <G style={{background:"linear-gradient(135deg,rgba(240,171,252,0.12),rgba(99,102,241,0.1))",borderColor:"rgba(240,171,252,0.35)",textAlign:"center"}} glow="#d946ef">
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:900,color:"#f0abfc",marginBottom:4,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><DI s={18}/> DUKY HUNT</div>
               <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.6}}>
-                Acumulează cât mai mult <b style={{color:"#f0abfc"}}>DUKY</b> înainte de airdrop!<br/>
-                Câștigă turnee zilnice → primești DUKY bonus direct în portofel.
+                Accumulate as much <b style={{color:"#f0abfc"}}>DUKY</b> as possible before the airdrop!<br/>
+                Win daily tournaments → earn bonus DUKY directly to your wallet.
               </div>
               <div style={{marginTop:8,display:"flex",justifyContent:"center",gap:14}}>
                 <div style={{textAlign:"center"}}>
-                  <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>DUKY tău</div>
+                  <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Your DUKY</div>
                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:16,fontWeight:700,color:"#f0abfc"}}>{fD(duky)}</div>
                 </div>
                 <div style={{textAlign:"center"}}>
-                  <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Score curent</div>
+                  <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Current score</div>
                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:16,fontWeight:700,color:"#4ade80"}}>{myScore}🥚</div>
                 </div>
               </div>
@@ -2069,7 +2054,7 @@ export default function DuckFarm(){
 
             {/* Tabel premii 24h */}
             <G style={{borderColor:"rgba(99,102,241,0.2)"}}>
-              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#a78bfa",marginBottom:8,letterSpacing:1}}>PREMII 24H</div>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#a78bfa",marginBottom:8,letterSpacing:1}}>24H PRIZES</div>
               <div style={{display:"flex",flexDirection:"column",gap:3}}>
                 {PRIZE_TABLE.map((row,i)=>{
                   const isMyTier=(myRank===1&&i===0)||(myRank<=3&&myRank>1&&i===1)||(myRank<=10&&myRank>3&&i===2)||(myRank<=25&&myRank>10&&i===3)||(myRank<=50&&myRank>25&&i===4)||(myRank>50&&i===5);
@@ -2083,7 +2068,7 @@ export default function DuckFarm(){
                         {row.med>0&&<span style={{fontSize:9,color:"#4ade80"}}>Med×{row.med}</span>}
                         <span style={{fontSize:9,color:"#86efac"}}>{row.seedLabel}</span>
                       </div>
-                      {isMyTier&&<B color={row.color} size={8}>← tu</B>}
+                      {isMyTier&&<B color={row.color} size={8}>← you</B>}
                     </div>
                   );
                 })}
@@ -2116,8 +2101,8 @@ export default function DuckFarm(){
             </G>
 
             {tData.endTime<=now&&(
-              <G style={{textAlign:"center"}}><div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:7}}>Turneul zilnic s-a încheiat!</div>
-                <button style={{...S.btn,background:"linear-gradient(135deg,#312e81,#6366f1)"}} onClick={()=>{setTData({opponents:GEN_OPP(),endTime:Date.now()+24*3600*1000,claimed:false});addFloat("🌅 New Daily!","#fbbf24");}}>Start Zilnic Nou</button>
+              <G style={{textAlign:"center"}}><div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:7}}>Daily tournament ended!</div>
+                <button style={{...S.btn,background:"linear-gradient(135deg,#312e81,#6366f1)"}} onClick={()=>{setTData({opponents:GEN_OPP(),endTime:Date.now()+24*3600*1000,claimed:false});addFloat("🌅 New Daily!","#fbbf24");}}>Start New Daily</button>
               </G>
             )}
           </div>
@@ -2126,7 +2111,7 @@ export default function DuckFarm(){
         {tab==="league"&&leagueSubTab==="weekly"&&(()=>{
           const wEnded=weeklyTData.endTime<=now;
           const wOpp=weeklyTData.opponents;
-          const wAll=[...wOpp,{id:"me",name:"Tu",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true}].sort((a,b)=>b.score-a.score);
+          const wAll=[...wOpp,{id:"me",name:"You",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true}].sort((a,b)=>b.score-a.score);
           const wRank=wAll.findIndex(p=>p.isPlayer)+1;
           const wRew=WEEKLY_TREWARD(wRank);
           const wHasSeed=wRew.seeds&&(wRew.seeds.legendary+wRew.seeds.medium+wRew.seeds.basic)>0;
@@ -2137,9 +2122,9 @@ export default function DuckFarm(){
             {/* Banner săptămânal */}
             <G style={{background:"linear-gradient(135deg,rgba(240,171,252,0.18),rgba(99,102,241,0.12))",borderColor:"rgba(240,171,252,0.5)",textAlign:"center"}} glow="#d946ef">
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:900,color:"#f0abfc",marginBottom:4}}>WEEKLY CHAMPIONSHIP</div>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.6,marginBottom:8}}>Locul #1 câștigă o <b style={{color:"#f0abfc"}}>rață Mythic</b> 🦆✨</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.6,marginBottom:8}}>1st place wins a <b style={{color:"#f0abfc"}}>Mythic duck</b> 🦆✨</div>
               <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-                {[["⏱ Timp",wEnded?"ENDED":fT(Math.max(0,Math.floor((weeklyTData.endTime-now)/1000))),wEnded?"#ef4444":"#f0abfc"],["# Rank",`#${wRank}`,wRank===1?"#f0abfc":wRank<=3?"#fbbf24":"#e2e8f0"],["eggs/min",myScore,"#4ade80"]].map(([l,v,c])=>(
+                {[["⏱ Time",wEnded?"ENDED":fT(Math.max(0,Math.floor((weeklyTData.endTime-now)/1000))),wEnded?"#ef4444":"#f0abfc"],["# Rank",`#${wRank}`,wRank===1?"#f0abfc":wRank<=3?"#fbbf24":"#e2e8f0"],["eggs/min",myScore,"#4ade80"]].map(([l,v,c])=>(
                   <div key={l} style={{background:"rgba(0,0,0,0.35)",borderRadius:10,padding:"7px 12px",textAlign:"center"}}>
                     <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>{l}</div>
                     <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:c}}>{v}</div>
@@ -2181,13 +2166,13 @@ export default function DuckFarm(){
                   }}>Claim</button>
                 )}
                 {weeklyTData.claimed&&<B color="#4ade80" size={10}>Done</B>}
-                {!wEnded&&<div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>La final</div>}
+                {!wEnded&&<div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>At end</div>}
               </div>
             </G>
 
             {/* Tabel premii săptămânale */}
             <G style={{borderColor:"rgba(240,171,252,0.2)"}}>
-              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#f0abfc",marginBottom:8,letterSpacing:1}}>PREMII SĂPTĂMÂNALE</div>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#f0abfc",marginBottom:8,letterSpacing:1}}>WEEKLY PRIZES</div>
               <div style={{display:"flex",flexDirection:"column",gap:3}}>
                 {WEEKLY_PRIZE_TABLE.map((row,i)=>{
                   const isMyTier=(wRank===1&&i===0)||(wRank<=3&&wRank>1&&i===1)||(wRank<=10&&wRank>3&&i===2)||(wRank<=25&&wRank>10&&i===3)||(wRank<=50&&wRank>25&&i===4)||(wRank>50&&i===5);
@@ -2202,7 +2187,7 @@ export default function DuckFarm(){
                         {row.med>0&&<span style={{fontSize:9,color:"#4ade80"}}>Med×{row.med}</span>}
                         <span style={{fontSize:9,color:"#86efac"}}>{row.seedLabel}</span>
                       </div>
-                      {isMyTier&&<B color={row.color} size={8}>← tu</B>}
+                      {isMyTier&&<B color={row.color} size={8}>← you</B>}
                     </div>
                   );
                 })}
@@ -2230,14 +2215,14 @@ export default function DuckFarm(){
               </div>
               {wRank>20&&<div style={{marginTop:6,padding:"6px 9px",borderRadius:9,background:"rgba(240,171,252,0.12)",border:"1px solid rgba(240,171,252,0.4)",display:"flex",alignItems:"center",gap:7}}>
                 <div style={{width:26,textAlign:"center",fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"#f0abfc"}}>#{wRank}</div>
-                <div style={{flex:1,fontSize:11,color:"#f0abfc",fontWeight:700}}>Tu</div>
+                <div style={{flex:1,fontSize:11,color:"#f0abfc",fontWeight:700}}>You</div>
                 <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:10,color:"#4ade80"}}>{myScore}🥚</div>
               </div>}
             </G>
 
             {wEnded&&(
-              <G style={{textAlign:"center"}}><div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:7}}>Turneul săptămânal s-a încheiat!</div>
-                <button style={{...S.btn,background:"linear-gradient(135deg,#4c1d95,#f0abfc)"}} onClick={()=>{setWeeklyTData({opponents:GEN_WEEKLY_OPP(),endTime:Date.now()+7*24*3600*1000,claimed:false});addFloat("🏆 New Weekly!","#f0abfc");}}>Start Săptămânal Nou</button>
+              <G style={{textAlign:"center"}}><div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:7}}>Weekly tournament ended!</div>
+                <button style={{...S.btn,background:"linear-gradient(135deg,#4c1d95,#f0abfc)"}} onClick={()=>{setWeeklyTData({opponents:GEN_WEEKLY_OPP(),endTime:Date.now()+7*24*3600*1000,claimed:false});addFloat("🏆 New Weekly!","#f0abfc");}}>Start New Weekly</button>
               </G>
             )}
           </div>

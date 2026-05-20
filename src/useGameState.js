@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { loadPlayerData, savePlayerData, createPlayer } from "./firebase";
+import { getTelegramUser, getPlayerId } from "./telegram";
 import {
   DUKY_R, LVLS, SEEDS, UPGRADES, MEDS,
   MAX_MINE, MINE_SECS, CD_SECS, BREED_CD_SECS, RARITIES, SLOT_COSTS, SYR_COST, MAX_WATER, MAX_ADS,
@@ -7,6 +9,10 @@ import {
 } from "./constants";
 
 export function useGameState() {
+  const telegramUser = getTelegramUser();
+  const playerId = getPlayerId();
+  const fbSaveTimer = useRef(null);
+
   // Resurse
   const[eggs,     setEggs]     =useState(()=>Number(localStorage.getItem("duky_eggs"))||2);
   const[coins,    setCoins]    =useState(()=>Number(localStorage.getItem("duky_coins"))||0.5);
@@ -177,7 +183,21 @@ export function useGameState() {
     localStorage.setItem("duky_lvlSkips", lvlSkips);
     localStorage.setItem("duky_completionBonus", JSON.stringify(completionBonusClaimed));
     localStorage.setItem("duky_lvlPass", JSON.stringify(lvlPass));
-  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips, completionBonusClaimed, lvlPass, dukyBurned, dukyStaked, stakeUntil]);
+
+    // Firebase save debounsat — max o data la 30s
+    if(playerId) {
+      if(fbSaveTimer.current) clearTimeout(fbSaveTimer.current);
+      fbSaveTimer.current = setTimeout(()=>{
+        savePlayerData(playerId, {
+          eggs, coins, duky, feed, syringes, totalEggs, slots,
+          dukyBurned, dukyStaked, stakeUntil,
+          ducks, upgrades, achieved,
+          name: telegramUser?.first_name || localStorage.getItem("duky_player_id") || "Duck Farmer",
+          username: telegramUser?.username || "",
+        }).catch(e=>console.warn("Firebase save failed:", e));
+      }, 30000);
+    }
+  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips, completionBonusClaimed, lvlPass, dukyBurned, dukyStaked, stakeUntil]); // eslint-disable-line
 
   // Auto-unstake when period ends
   useEffect(()=>{
@@ -190,6 +210,36 @@ export function useGameState() {
 
   // Bucla de timp (1s)
   useEffect(()=>{const iv=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(iv);},[]);
+
+  // Firebase: incarca datele la mount dacă user-ul are Telegram ID
+  useEffect(()=>{
+    if(!playerId) return;
+    (async()=>{
+      try {
+        let data = await loadPlayerData(playerId);
+        if(!data) {
+          await createPlayer(playerId, telegramUser||{first_name:"Duck Farmer"});
+          return;
+        }
+        // Suprascrie localStorage cu datele din Firebase (mai recente)
+        if(data.eggs      != null) { localStorage.setItem("duky_eggs",      data.eggs);      setEggs(Number(data.eggs)); }
+        if(data.coins     != null) { localStorage.setItem("duky_coins",     data.coins);     setCoins(Number(data.coins)); }
+        if(data.duky      != null) { localStorage.setItem("duky_val",       data.duky);      setDuky(Number(data.duky)); }
+        if(data.feed      != null) { localStorage.setItem("duky_feed",      data.feed);      setFeed(Number(data.feed)); }
+        if(data.syringes  != null) { localStorage.setItem("duky_syr",       data.syringes);  setSyringes(Number(data.syringes)); }
+        if(data.totalEggs != null) { localStorage.setItem("duky_totalEggs", data.totalEggs); setTotalEggs(Number(data.totalEggs)); }
+        if(data.slots     != null) { localStorage.setItem("duky_slots",     data.slots);     setSlots(Number(data.slots)); }
+        if(data.dukyBurned!= null) { localStorage.setItem("duky_burned",    data.dukyBurned);setDukyBurned(Number(data.dukyBurned)); }
+        if(data.dukyStaked!= null) { localStorage.setItem("duky_staked",    data.dukyStaked);setDukyStaked(Number(data.dukyStaked)); }
+        if(data.stakeUntil!= null) { localStorage.setItem("duky_stakeUntil",data.stakeUntil);setStakeUntil(Number(data.stakeUntil)); }
+        if(data.ducks     != null) { localStorage.setItem("duky_ducks",     JSON.stringify(data.ducks));  setDucks(data.ducks); }
+        if(data.upgrades  != null) { localStorage.setItem("duky_upgrades",  JSON.stringify(data.upgrades));setUpgrades(data.upgrades); }
+        if(data.achieved  != null) { localStorage.setItem("duky_achieved",  JSON.stringify(data.achieved));setAchieved(data.achieved); }
+      } catch(e) {
+        console.warn("Firebase load failed, using localStorage:", e);
+      }
+    })();
+  }, []); // eslint-disable-line
 
   // Login streak + offline earnings — ruleaza o singura data la mount
   useEffect(()=>{
@@ -486,5 +536,6 @@ export function useGameState() {
     miningBoostUntil, setMiningBoostUntil,
     completionBonusClaimed, setCompletionBonusClaimed,
     lvlPass, buyLvlPass,
+    telegramUser, playerId,
   };
 }

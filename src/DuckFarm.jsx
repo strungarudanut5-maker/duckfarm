@@ -78,6 +78,7 @@ export default function DuckFarm(){
     miningBoostUntil, setMiningBoostUntil,
     completionBonusClaimed, setCompletionBonusClaimed,
     lvlPass, buyLvlPass,
+    telegramUser, playerId,
   } = useGameState();
 
   const[selSeed,  setSelSeed]  =useState(null);
@@ -2510,6 +2511,19 @@ export default function DuckFarm(){
 
             {profilTab==="wallet"&&(
               <div style={S.col}>
+                {telegramUser&&(
+                  <G style={{display:"flex",alignItems:"center",gap:10}} glow="#6366f1">
+                    <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a78bfa)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:16,color:"#fff",flexShrink:0}}>
+                      {(telegramUser.first_name||"?")[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:13,color:"#e2e8f0"}}>{telegramUser.first_name}{telegramUser.last_name?" "+telegramUser.last_name:""}</div>
+                      {telegramUser.username&&<div style={{fontSize:10,color:"rgba(255,255,255,0.35)"}}>@{telegramUser.username}</div>}
+                      <div style={{fontSize:9,color:"rgba(99,102,241,0.6)",marginTop:1}}>ID: {telegramUser.id}</div>
+                    </div>
+                    <div style={{marginLeft:"auto"}}><B color="#4ade80" size={9}>Telegram</B></div>
+                  </G>
+                )}
                 <div style={{display:"flex",gap:8}}>
                   <G style={{flex:1,textAlign:"center"}} glow="#fbbf24"><div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:3,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}><img src="/coin.svg" alt="coin" style={{width:11,height:11}}/> COINS</div><div style={{fontSize:26,fontWeight:900,color:"#fbbf24",fontFamily:"'Orbitron',sans-serif"}}>{Math.floor(coins)}</div></G>
                   <G style={{flex:1,textAlign:"center"}} glow="#f0abfc"><div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:3,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}><img src="/duky.svg" alt="duky" style={{width:11,height:14}}/> DUKY</div><div style={{fontSize:22,fontWeight:900,color:"#f0abfc",fontFamily:"'Orbitron',sans-serif"}}>{fD(duky)}</div></G>

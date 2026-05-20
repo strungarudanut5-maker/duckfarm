@@ -63,6 +63,8 @@ export const SYR_COST=15,MAX_TAPS=10000,MAX_WATER=30,MAX_ADS=10,MAX_MINE=4,MINE_
 
 export const LVL_PASS_COST=100;
 export const RARITY_FEED_ADD={common:0,rare:3,epic:7,legendary:15,mythic:30};
+export const DUKY_TOTAL_SUPPLY=100_000_000;
+export const AIRDROP_DATE=new Date('2026-10-01T00:00:00Z').getTime();
 export const gR=id=>RARITIES.find(r=>r.id===id);
 export const gNR=id=>{const i=RARITIES.findIndex(r=>r.id===id);return i>=0&&i<4?RARITIES[i+1]:null;};
 export const gL=lvl=>LVLS[Math.min(lvl-1,6)];

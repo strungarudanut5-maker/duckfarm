@@ -44,6 +44,9 @@ export function useGameState() {
   const[adSyrToday,    setAdSyrToday]    =useState(()=>Number(localStorage.getItem("duky_adSyrToday"))||0);
   const[spinUsedToday, setSpinUsedToday]=useState(()=>localStorage.getItem("duky_spinDate")===new Date().toDateString());
   const[miningBoostUntil,setMiningBoostUntil]=useState(()=>Number(localStorage.getItem("duky_miningBoostUntil"))||0);
+  const[dukyBurned,  setDukyBurned]  =useState(()=>Number(localStorage.getItem("duky_burned"))||0);
+  const[dukyStaked,  setDukyStaked]  =useState(()=>Number(localStorage.getItem("duky_staked"))||0);
+  const[stakeUntil,  setStakeUntil]  =useState(()=>Number(localStorage.getItem("duky_stakeUntil"))||0);
   // Timers and actions
   const[cooking,  setCooking]  =useState(()=>{
     const saved=JSON.parse(localStorage.getItem("duky_cooking"));
@@ -165,13 +168,25 @@ export function useGameState() {
     localStorage.setItem("duky_adCoinsToday", adCoinsToday);
     localStorage.setItem("duky_adSyrToday", adSyrToday);
     localStorage.setItem("duky_miningBoostUntil", miningBoostUntil);
+    localStorage.setItem("duky_burned", dukyBurned);
+    localStorage.setItem("duky_staked", dukyStaked);
+    localStorage.setItem("duky_stakeUntil", stakeUntil);
     localStorage.setItem("duky_mineSkips", mineSkips);
     localStorage.setItem("duky_breedSkips", breedSkips);
     localStorage.setItem("duky_breedCdSkips", breedCdSkips);
     localStorage.setItem("duky_lvlSkips", lvlSkips);
     localStorage.setItem("duky_completionBonus", JSON.stringify(completionBonusClaimed));
     localStorage.setItem("duky_lvlPass", JSON.stringify(lvlPass));
-  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips, completionBonusClaimed, lvlPass]);
+  }, [eggs, coins, duky, feed, syringes, water, adsToday, totalEggs, meds, slots, ducks, plots, seedInv, upgrades, nextId, taskClaimed, socialClaimed, achieved, mineCount, tapsToday, cooking, breedSlot, adCoinsToday, adSyrToday, miningBoostUntil, mineSkips, breedSkips, breedCdSkips, lvlSkips, completionBonusClaimed, lvlPass, dukyBurned, dukyStaked, stakeUntil]);
+
+  // Auto-unstake when period ends
+  useEffect(()=>{
+    if(stakeUntil&&stakeUntil<=now&&dukyStaked>0){
+      setDuky(v=>+(v+dukyStaked).toFixed(4));
+      addFloat(`+${dukyStaked} DUKY unlocked!`,"#f0abfc");
+      setDukyStaked(0); setStakeUntil(0);
+    }
+  },[now]); // eslint-disable-line
 
   // Bucla de timp (1s)
   useEffect(()=>{const iv=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(iv);},[]);
@@ -467,6 +482,7 @@ export function useGameState() {
     skipMining, skipBreeding, skipBreedCd, mineSkips, breedSkips, breedCdSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
     adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday, spinUsedToday, setSpinUsedToday,
+    dukyBurned, setDukyBurned, dukyStaked, setDukyStaked, stakeUntil, setStakeUntil,
     miningBoostUntil, setMiningBoostUntil,
     completionBonusClaimed, setCompletionBonusClaimed,
     lvlPass, buyLvlPass,

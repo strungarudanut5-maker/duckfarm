@@ -4,7 +4,8 @@ import {
   BREEDS, RARITIES, DUKY_R, SEEDS, TIER_COLORS, RECIPES, MEDS, UPGRADES,
   SLOT_COSTS, SYR_COST, MAX_TAPS, MAX_WATER, MAX_ADS, MAX_MINE, MINE_SECS, CD_SECS,
   gR, gNR, gL, gLExtended, gLC, gBreed, fD, fT, GEN_OPP, GEN_WEEKLY_OPP, TREWARD, WEEKLY_TREWARD, ACHIEVEMENTS_TPL, STREAK_REWARDS, PRIZE_TABLE, WEEKLY_PRIZE_TABLE,
-  COIN_PACKS, HATCH_EGGS, MYSTERY_EGGS, MAX_AD_COINS, MAX_AD_SYR, LVL_PASS_COST, RARITY_FEED_ADD
+  COIN_PACKS, HATCH_EGGS, MYSTERY_EGGS, MAX_AD_COINS, MAX_AD_SYR, LVL_PASS_COST, RARITY_FEED_ADD,
+  DUKY_TOTAL_SUPPLY, AIRDROP_DATE
 } from './constants';
 import { S } from './styles';
 import { Duck, G, B, PB, SL, Row } from './components';
@@ -73,6 +74,7 @@ export default function DuckFarm(){
     skipMining, skipBreeding, skipBreedCd, mineSkips, breedSkips, breedCdSkips, lvlSkips, setLvlSkips,
     loginStreak, loginReward, offlineEarnings, claimLoginReward, claimOfflineEarnings,
     adCoinsToday, setAdCoinsToday, adSyrToday, setAdSyrToday, spinUsedToday, setSpinUsedToday,
+    dukyBurned, setDukyBurned, dukyStaked, setDukyStaked, stakeUntil, setStakeUntil,
     miningBoostUntil, setMiningBoostUntil,
     completionBonusClaimed, setCompletionBonusClaimed,
     lvlPass, buyLvlPass,
@@ -1848,7 +1850,7 @@ export default function DuckFarm(){
                         let rv=Math.random()*total; let rid=egg.odds[egg.odds.length-1].rid;
                         for(const o of egg.odds){rv-=o.w;if(rv<=0){rid=o.rid;break;}}
                         if(egg.costType==="coins")setCoins(c=>c-egg.cost);
-                        else setDuky(v=>+(v-egg.cost).toFixed(4));
+                        else{setDuky(v=>+(v-egg.cost).toFixed(4));setDukyBurned(b=>+(b+egg.cost*0.8).toFixed(4));}
                         const nd={id:"d"+nextId,rid,bid:gBreed(rid),lvl:1,xp:0,tired:false,lvlUpAt:null,miningUntil:null,breedCdUntil:null,nickname:""};
                         setNextId(n=>n+1);setDucks(d=>[...d,nd]);
                         setEggResult({rid,color:gR(rid)?.color,name:gR(rid)?.name,egg:egg.emoji});
@@ -2218,6 +2220,38 @@ export default function DuckFarm(){
         {tab==="league"&&leagueSubTab==="daily"&&(
           <div style={S.col}>
 
+            {/* AIRDROP COUNTDOWN */}
+            {(()=>{
+              const secsLeft=Math.max(0,Math.floor((AIRDROP_DATE-now)/1000));
+              const days=Math.floor(secsLeft/86400);
+              const hrs=Math.floor((secsLeft%86400)/3600);
+              const mins=Math.floor((secsLeft%3600)/60);
+              const totalHoldings=+(duky+dukyStaked).toFixed(4);
+              const shareP=(totalHoldings/DUKY_TOTAL_SUPPLY*100).toFixed(6);
+              return(
+                <G style={{background:"linear-gradient(135deg,rgba(240,171,252,0.22),rgba(99,102,241,0.18))",borderColor:"rgba(240,171,252,0.6)",textAlign:"center"}} glow="#f0abfc">
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:900,color:"#f0abfc",letterSpacing:3,marginBottom:8}}>AIRDROP COUNTDOWN</div>
+                  <div style={{display:"flex",justifyContent:"center",gap:10,marginBottom:10}}>
+                    {[[days,"DAYS"],[hrs,"HRS"],[mins,"MIN"]].map(([v,l])=>(
+                      <div key={l} style={{background:"rgba(0,0,0,0.4)",borderRadius:12,padding:"10px 14px",minWidth:52}}>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,color:"#fff"}}>{String(v).padStart(2,"0")}</div>
+                        <div style={{fontSize:8,color:"rgba(255,255,255,0.4)",marginTop:2}}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:8}}>
+                    <div><div style={{fontSize:8,color:"rgba(255,255,255,0.35)"}}>Your DUKY</div><div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:"#f0abfc"}}>{fD(totalHoldings)}</div></div>
+                    <div><div style={{fontSize:8,color:"rgba(255,255,255,0.35)"}}>Supply share</div><div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:"#4ade80"}}>{shareP}%</div></div>
+                    <div><div style={{fontSize:8,color:"rgba(255,255,255,0.35)"}}>Burned</div><div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:"#ef4444"}}>{fD(dukyBurned)}</div></div>
+                  </div>
+                  <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",lineHeight:1.6}}>
+                    Top holders on <b style={{color:"#fbbf24"}}>Oct 1, 2026</b> receive airdrop allocation.<br/>
+                    Stake DUKY for <b style={{color:"#f0abfc"}}>2-3× bonus</b> at distribution.
+                  </div>
+                </G>
+              );
+            })()}
+
             {/* DUKY Hunt banner */}
             <G style={{background:"linear-gradient(135deg,rgba(240,171,252,0.12),rgba(99,102,241,0.1))",borderColor:"rgba(240,171,252,0.35)",textAlign:"center"}} glow="#d946ef">
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:900,color:"#f0abfc",marginBottom:4,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><DI s={18}/> DUKY HUNT</div>
@@ -2491,6 +2525,99 @@ export default function DuckFarm(){
                   <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:10}}>DUKY earned from: level up · mining · leagues · tasks<br/>Connect wallet to transfer on blockchain!</div>
                   <button style={{...S.breedBtn,background:"linear-gradient(135deg,#4c1d95,#2563eb)"}}>Connect Wallet</button>
                 </G>
+                {(()=>{
+                  const circulating=+(DUKY_TOTAL_SUPPLY-dukyBurned).toFixed(4);
+                  const playerShare=DUKY_TOTAL_SUPPLY>0?((duky/DUKY_TOTAL_SUPPLY)*100).toFixed(6):0;
+                  const burnPct=((dukyBurned/DUKY_TOTAL_SUPPLY)*100).toFixed(4);
+                  return(
+                    <G style={{borderColor:"rgba(251,191,36,0.25)",background:"linear-gradient(135deg,rgba(120,53,15,0.25),rgba(10,10,28,0.85))"}}>
+                      <div style={{fontWeight:700,fontSize:13,color:"#fbbf24",fontFamily:"'Orbitron',sans-serif",marginBottom:8}}>DUKY ECONOMY</div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:4}}>
+                        {[
+                          ["Total Supply","100,000,000","#fbbf24"],
+                          ["Circulating",circulating.toLocaleString(),"#4ade80"],
+                          ["Burned",fD(dukyBurned),"#f87171"],
+                          ["Burn Rate",burnPct+"%","#fb923c"],
+                        ].map(([label,value,color])=>(
+                          <div key={label} style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:"7px 9px",textAlign:"center"}}>
+                            <div style={{fontSize:8,color:"rgba(255,255,255,0.35)",marginBottom:2}}>{label}</div>
+                            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color}}>{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{background:"rgba(240,171,252,0.06)",borderRadius:9,padding:"6px 9px",textAlign:"center",marginTop:4}}>
+                        <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Your share of total supply</div>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:"#f0abfc"}}>{playerShare}%</div>
+                      </div>
+                    </G>
+                  );
+                })()}
+                {(()=>{
+                  const stakingOptions=[
+                    {days:30,mult:1.5,color:"#38bdf8"},
+                    {days:60,mult:2,  color:"#a78bfa"},
+                    {days:90,mult:3,  color:"#f0abfc"},
+                  ];
+                  const isStaked=dukyStaked>0&&stakeUntil>now;
+                  const unlockDate=isStaked?new Date(stakeUntil).toLocaleDateString():null;
+                  const remainMs=isStaked?Math.max(stakeUntil-now,0):0;
+                  const remainDays=Math.ceil(remainMs/(86400*1000));
+                  const stakedMult=isStaked?(()=>{
+                    const stakedDays=Math.round((stakeUntil-now+remainMs)/(86400*1000));
+                    if(stakedDays>60)return 3;
+                    if(stakedDays>30)return 2;
+                    return 1.5;
+                  })():null;
+                  const[stakeInput,setStakeInput]=React.useState("");
+                  return(
+                    <G style={{borderColor:"rgba(99,102,241,0.25)",background:"linear-gradient(135deg,rgba(30,20,80,0.4),rgba(10,10,28,0.85))"}}>
+                      <div style={{fontWeight:700,fontSize:13,color:"#a78bfa",fontFamily:"'Orbitron',sans-serif",marginBottom:4}}>STAKE DUKY</div>
+                      <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:8}}>Lock DUKY before Oct 1 2026 for airdrop bonus</div>
+                      {isStaked?(
+                        <div>
+                          <div style={{background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.3)",borderRadius:12,padding:"10px",textAlign:"center",marginBottom:8}}>
+                            <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>CURRENTLY STAKED</div>
+                            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:700,color:"#f0abfc"}}>{fD(dukyStaked)} DUKY</div>
+                            <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginTop:2}}>Unlocks {unlockDate} · {remainDays}d left</div>
+                            <div style={{marginTop:5}}><B color="#4ade80" size={10}>×{stakedMult} Airdrop Bonus</B></div>
+                          </div>
+                          <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",textAlign:"center"}}>DUKY unlocks automatically when period ends</div>
+                        </div>
+                      ):(
+                        <div>
+                          <div style={{display:"flex",gap:5,marginBottom:8}}>
+                            {stakingOptions.map(o=>(
+                              <button key={o.days} style={{flex:1,background:`${o.color}18`,border:`1px solid ${o.color}44`,borderRadius:10,padding:"7px 4px",cursor:"pointer",textAlign:"center"}}
+                                onClick={()=>{
+                                  const amt=parseFloat(stakeInput)||0;
+                                  if(amt<=0||amt>duky){addFloat("Not enough DUKY","#f87171");return;}
+                                  setDuky(v=>+(v-amt).toFixed(4));
+                                  setDukyStaked(amt);
+                                  setStakeUntil(Date.now()+o.days*86400*1000);
+                                  setStakeInput("");
+                                  addFloat(`Staked ${fD(amt)} DUKY!`,o.color);
+                                }}>
+                                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:o.color}}>×{o.mult}</div>
+                                <div style={{fontSize:8,color:"rgba(255,255,255,0.4)"}}>{o.days}d</div>
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                            <input
+                              type="number" placeholder="DUKY amount" min="0" max={duky}
+                              value={stakeInput}
+                              onChange={e=>setStakeInput(e.target.value)}
+                              style={{flex:1,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(99,102,241,0.3)",borderRadius:8,padding:"6px 9px",color:"#e2e8f0",fontSize:11,outline:"none"}}
+                            />
+                            <button style={{...S.btn,background:"rgba(99,102,241,0.3)",padding:"6px 10px",fontSize:10}}
+                              onClick={()=>setStakeInput(String(duky))}>MAX</button>
+                          </div>
+                          <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",marginTop:5,textAlign:"center"}}>Available: {fD(duky)} DUKY · Pick duration then tap bonus</div>
+                        </div>
+                      )}
+                    </G>
+                  );
+                })()}
               </div>
             )}
 

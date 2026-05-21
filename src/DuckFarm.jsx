@@ -370,7 +370,10 @@ export default function DuckFarm(){
     try {
       const adController = window.Adsgram?.init({ blockId: "30800", debug: false });
       if (!adController) { onDone(); return; }
-      adController.show().then(() => { onDone(); }).catch(() => {});
+      adController.show().then(() => { onDone(); }).catch((e) => {
+        if(e?.message?.includes('not active') || e?.type === 'no_ads') return;
+        onDone();
+      });
     } catch {
       onDone();
     }

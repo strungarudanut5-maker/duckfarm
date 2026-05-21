@@ -169,11 +169,12 @@ export const ACHIEVEMENTS_TPL = [
 ];
 
 export const COIN_PACKS = [
-  {n:"Starter", p:"0.99€",  e:"🥚", c:"#94a3b8", coins:500,   bonusSyr:0,  bonusBoost:0, bonusPill:0, desc:"~33 syr"},
-  {n:"Basic",   p:"2.99€",  e:"🦆", c:"#38bdf8", coins:2000,  bonusSyr:5,  bonusBoost:0, bonusPill:1, desc:"+5💉 +1💊"},
-  {n:"Pro ⭐",  p:"7.99€",  e:"🔮", c:"#a78bfa", coins:6000,  bonusSyr:15, bonusBoost:1, bonusPill:2, desc:"+15💉 +1⚡ +2💊"},
-  {n:"Elite",   p:"14.99€", e:"👑", c:"#fbbf24", coins:15000, bonusSyr:40, bonusBoost:3, bonusPill:5, desc:"+40💉 +3⚡ +5💊"},
+  {n:"Starter", p:"0.99€",  ton:0.2, stars:50,  e:"🥚", c:"#94a3b8", coins:500,   bonusSyr:0,  bonusBoost:0, bonusPill:0, desc:"~33 syr"},
+  {n:"Basic",   p:"2.99€",  ton:0.6, stars:150, e:"🦆", c:"#38bdf8", coins:2000,  bonusSyr:5,  bonusBoost:0, bonusPill:1, desc:"+5💉 +1💊"},
+  {n:"Pro ⭐",  p:"7.99€",  ton:1.6, stars:400, e:"🔮", c:"#a78bfa", coins:6000,  bonusSyr:15, bonusBoost:1, bonusPill:2, desc:"+15💉 +1⚡ +2💊"},
+  {n:"Elite",   p:"14.99€", ton:3.0, stars:750, e:"👑", c:"#fbbf24", coins:15000, bonusSyr:40, bonusBoost:3, bonusPill:5, desc:"+40💉 +3⚡ +5💊"},
 ];
+export const DEV_WALLET="UQB2dbOpaA5TY8Nb8YC2LmGBKlVRe2IP9HXNWG6kV_6-8HPV";
 
 export const HATCH_EGGS = [
   {rid:"rare",      name:"Rare",      emoji:"💎", coins:1500,  color:"#38bdf8", desc:"Skip breeding RNG"},

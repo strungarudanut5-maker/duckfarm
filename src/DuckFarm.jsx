@@ -160,6 +160,41 @@ export default function DuckFarm(){
     });
   },[playerId]);
 
+  // Splash screen — hide after 2.2s
+  useEffect(()=>{
+    const t=setTimeout(()=>setSplashVisible(false),2200);
+    return()=>clearTimeout(t);
+  },[]);
+
+  // Celebration helper
+  const triggerCelebration=useCallback((type,rarity,label)=>{
+    if(celebTimerRef.current) clearTimeout(celebTimerRef.current);
+    const particles=Array.from({length:22},(_,i)=>({
+      id:i, x:3+Math.random()*94,
+      delay:Math.random()*0.7, duration:1.4+Math.random()*0.9,
+      size:13+Math.floor(Math.random()*18),
+    }));
+    setCelebration({type,rarity,label,particles});
+    celebTimerRef.current=setTimeout(()=>setCelebration(null),2800);
+  },[]);
+
+  // Watch duck level ups
+  useEffect(()=>{
+    let changed=null;
+    ducks.forEach(d=>{
+      if(prevDuckLvls.current[d.id]!==undefined && d.lvl>prevDuckLvls.current[d.id])
+        changed={rarity:d.rid,lvl:d.lvl};
+      prevDuckLvls.current[d.id]=d.lvl;
+    });
+    if(changed) triggerCelebration('levelup',changed.rarity,`LEVEL ${changed.lvl}!`);
+  },[ducks,triggerCelebration]);
+
+  // Watch breed success
+  useEffect(()=>{
+    if(breedRes?.ok&&!breedRes?.noSlot)
+      triggerCelebration('breed',breedRes.rarity?.id,`${(breedRes.rarity?.name||'').toUpperCase()} OBTAINED!`);
+  },[breedRes,triggerCelebration]);
+
   const[selSeed,  setSelSeed]  =useState(null);
   const[selDuck,  setSelDuck]  =useState(null);
   const[tab,      setTab]      =useState("farm");
@@ -215,6 +250,10 @@ export default function DuckFarm(){
   const [spinning,    setSpinning]    =useState(false);
   const [spinResult,  setSpinResult]  =useState(null);
   const [stakeInput,  setStakeInput]  =useState("");
+  const [splashVisible,setSplashVisible]=useState(true);
+  const [celebration,  setCelebration]  =useState(null);
+  const prevDuckLvls  =useRef({});
+  const celebTimerRef =useRef(null);
   const wheelRef=useRef(null);
   const rafRef=useRef(null);
   const wheelAngleRef=useRef(0);
@@ -990,6 +1029,47 @@ export default function DuckFarm(){
 
       {/* Floats */}
       <div style={S.floatWrap}>{floats.map(f=><div key={f.id} style={{...S.float,color:f.color}}>{f.text}</div>)}</div>
+
+      {/* Loading splash screen */}
+      {splashVisible&&(
+        <div style={{position:"fixed",inset:0,zIndex:99999,background:"linear-gradient(135deg,#07071a 0%,#0d0d2b 50%,#070718 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",animation:"splashFadeOut 2.2s ease-in-out forwards"}}>
+          <div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}>
+            <div style={{position:"absolute",width:350,height:350,borderRadius:"50%",background:"radial-gradient(circle,rgba(124,58,237,0.28) 0%,transparent 70%)",top:"-100px",left:"-80px",animation:"orbFloat1 8s ease-in-out infinite"}}/>
+            <div style={{position:"absolute",width:280,height:280,borderRadius:"50%",background:"radial-gradient(circle,rgba(56,189,248,0.18) 0%,transparent 70%)",bottom:"-60px",right:"-60px",animation:"orbFloat2 10s ease-in-out infinite"}}/>
+          </div>
+          <div style={{animation:"logoFloat 2s ease-in-out infinite",marginBottom:24}}>
+            <img src="/duky.svg" alt="Duky" style={{width:96,height:96,filter:"drop-shadow(0 0 28px rgba(167,139,250,0.7))"}}/>
+          </div>
+          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:28,fontWeight:900,color:"#fff",letterSpacing:4,marginBottom:4,textShadow:"0 0 30px rgba(167,139,250,0.8)"}}>DUKY</div>
+          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:400,color:"rgba(167,139,250,0.7)",letterSpacing:6,marginBottom:40}}>FARM</div>
+          <div style={{width:160,height:3,background:"rgba(255,255,255,0.08)",borderRadius:99,overflow:"hidden"}}>
+            <div style={{height:"100%",background:"linear-gradient(90deg,#7c3aed,#a78bfa,#38bdf8)",borderRadius:99,animation:"splashBar 1.8s ease-out forwards"}}/>
+          </div>
+        </div>
+      )}
+
+      {/* Celebration overlay — level up & breed */}
+      {celebration&&(
+        <div style={{position:"fixed",inset:0,zIndex:9998,pointerEvents:"none",overflow:"hidden"}}>
+          {celebration.particles.map(p=>{
+            const icons=celebration.type==='levelup'
+              ?['⭐','✨','🌟','💫','🎉','⚡','🦆']
+              :['🦆','✨','💎','🌟','🎊','🔮','👑'];
+            return(
+              <div key={p.id} style={{
+                position:"absolute",left:`${p.x}%`,top:"-5%",
+                fontSize:p.size,
+                animation:`particleFall ${p.duration}s ease-in ${p.delay}s forwards`,
+                userSelect:"none",
+              }}>{icons[p.id%icons.length]}</div>
+            );
+          })}
+          <div style={{position:"absolute",top:"38%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",animation:"celebPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards",pointerEvents:"none"}}>
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:28,fontWeight:900,color:celebration.type==='levelup'?"#fbbf24":gR(celebration.rarity)?.color||"#a78bfa",textShadow:`0 0 40px ${gR(celebration.rarity)?.glow||"#7c3aed"}`,lineHeight:1.1,whiteSpace:"nowrap"}}>{celebration.label}</div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:6,fontFamily:"'Exo 2',sans-serif"}}>{celebration.type==='levelup'?'Duck leveled up!':'New duck obtained!'}</div>
+          </div>
+        </div>
+      )}
 
       {/* Ad modal */}
       {renderAdModal()}
@@ -1882,66 +1962,76 @@ export default function DuckFarm(){
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:"#fbbf24",marginBottom:3,display:"flex",alignItems:"center",gap:5}}><img src="/coin.svg" alt="coin" style={{width:16,height:16}}/> BUY COINS</div>
               <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:10}}>Pay with TON or Telegram Stars</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {COIN_PACKS.map(pkg=>(
-                  <div key={pkg.n} style={{background:`${pkg.c}08`,border:`1px solid ${pkg.c}33`,borderRadius:13,padding:"10px 12px",position:"relative"}}>
-                    {pkg.n==="Pro ⭐"&&<div style={{position:"absolute",top:-8,right:10,background:"linear-gradient(135deg,#7c3aed,#a78bfa)",borderRadius:99,padding:"2px 8px",fontSize:8,fontWeight:700,color:"#fff"}}>POPULAR</div>}
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                      <div style={{fontSize:24}}>{pkg.e}</div>
-                      <div style={{flex:1}}>
-                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:pkg.c}}>{pkg.n}</div>
-                        <div style={{fontSize:12,fontWeight:900,color:"#fbbf24",display:"flex",alignItems:"center",gap:3}}><CI s={10}/>{pkg.coins.toLocaleString()} coins</div>
-                        {pkg.desc&&<div style={{fontSize:8,color:"rgba(255,255,255,0.35)"}}>{pkg.desc}</div>}
+                {COIN_PACKS.map(pkg=>{
+                  const isPopular=pkg.n==="Pro ⭐";
+                  return(
+                  <div key={pkg.n} style={{position:"relative",borderRadius:16,overflow:"hidden",border:`1.5px solid ${isPopular?pkg.c+"88":pkg.c+"33"}`,boxShadow:isPopular?`0 0 22px ${pkg.c}44,0 4px 24px rgba(0,0,0,0.4)`:"0 2px 12px rgba(0,0,0,0.3)"}}>
+                    {/* Card background */}
+                    <div style={{position:"absolute",inset:0,background:`linear-gradient(135deg,${pkg.c}18 0%,${pkg.c}08 50%,rgba(6,6,20,0.95) 100%)`}}/>
+                    {/* Shimmer line on popular */}
+                    {isPopular&&<div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${pkg.c},transparent)`,animation:"shimmer 2s linear infinite",backgroundSize:"200% 100%"}}/>}
+                    {/* POPULAR badge */}
+                    {isPopular&&<div style={{position:"absolute",top:10,right:10,background:`linear-gradient(135deg,${pkg.c},${pkg.c}bb)`,borderRadius:99,padding:"3px 10px",fontSize:8,fontWeight:900,color:"#fff",letterSpacing:1,boxShadow:`0 0 12px ${pkg.c}66`}}>BEST VALUE</div>}
+                    <div style={{position:"relative",padding:"14px 14px 12px"}}>
+                      {/* Top row: icon + name + coins */}
+                      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+                        <div style={{width:52,height:52,borderRadius:14,background:`${pkg.c}22`,border:`1.5px solid ${pkg.c}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0,boxShadow:`0 0 14px ${pkg.c}33`}}>{pkg.e}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:900,color:pkg.c,marginBottom:2}}>{pkg.n}</div>
+                          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:3}}>
+                            <CI s={13}/>
+                            <span style={{fontSize:16,fontWeight:900,color:"#fbbf24"}}>{pkg.coins.toLocaleString()}</span>
+                            <span style={{fontSize:9,color:"rgba(255,255,255,0.4)",marginTop:1}}>coins</span>
+                          </div>
+                          {pkg.desc&&<div style={{fontSize:8,color:"rgba(255,255,255,0.4)",letterSpacing:0.5}}>{pkg.desc}</div>}
+                        </div>
+                      </div>
+                      {/* Divider */}
+                      <div style={{height:1,background:`linear-gradient(90deg,${pkg.c}33,transparent)`,marginBottom:10}}/>
+                      {/* Buttons */}
+                      <div style={{display:"flex",gap:7}}>
+                        <button style={{flex:1,background:"linear-gradient(135deg,#1a6fa8,#229ED9)",border:"1px solid rgba(34,158,217,0.4)",borderRadius:10,padding:"9px 4px",color:"#fff",fontWeight:800,fontSize:10,cursor:"pointer",letterSpacing:0.5,boxShadow:"0 2px 10px rgba(34,158,217,0.3)"}}
+                          onClick={async()=>{
+                            const tg=window.Telegram?.WebApp;
+                            if(!tg){addFloat("Open in Telegram!","#ef4444");return;}
+                            try{
+                              addFloat("Loading...","#6366f1");
+                              const {createStarsInvoice}=await import('./firebase');
+                              const link=await createStarsInvoice(pkg.n, pkg);
+                              tg.openInvoice(link,(status)=>{
+                                if(status==='paid'){
+                                  setCoins(c=>c+pkg.coins);
+                                  if(pkg.bonusSyr>0)setSyringes(s=>s+pkg.bonusSyr);
+                                  if(pkg.bonusPill>0)setMeds(m=>({...m,recovery:(m.recovery||0)+pkg.bonusPill}));
+                                  if(pkg.bonusBoost>0)setMeds(m=>({...m,breedboost:(m.breedboost||0)+pkg.bonusBoost}));
+                                  addFloat(`+${pkg.coins.toLocaleString()} Coins!`,"#fbbf24");
+                                }
+                              });
+                            }catch{ addFloat("Try again!","#ef4444"); }
+                          }}>
+                          ⭐ {pkg.stars} Stars
+                        </button>
+                        <button style={{flex:1,background:"linear-gradient(135deg,#006aaa,#0098EA)",border:"1px solid rgba(0,152,234,0.4)",borderRadius:10,padding:"9px 4px",color:"#fff",fontWeight:800,fontSize:10,cursor:"pointer",letterSpacing:0.5,boxShadow:"0 2px 10px rgba(0,152,234,0.3)"}}
+                          onClick={async()=>{
+                            if(!tonAddress){addFloat("Connect wallet first!","#ef4444");return;}
+                            try{
+                              await tonConnectUI.sendTransaction({
+                                validUntil:Math.floor(Date.now()/1000)+600,
+                                messages:[{address:DEV_WALLET,amount:String(Math.round(pkg.ton*1e9))}]
+                              });
+                              setCoins(c=>c+pkg.coins);
+                              if(pkg.bonusSyr>0)setSyringes(s=>s+pkg.bonusSyr);
+                              if(pkg.bonusPill>0)setMeds(m=>({...m,recovery:(m.recovery||0)+pkg.bonusPill}));
+                              if(pkg.bonusBoost>0)setMeds(m=>({...m,breedboost:(m.breedboost||0)+pkg.bonusBoost}));
+                              addFloat(`+${pkg.coins.toLocaleString()} Coins!`,"#fbbf24");
+                            }catch{ addFloat("Transaction cancelled","#ef4444"); }
+                          }}>
+                          💎 {pkg.ton} TON
+                        </button>
                       </div>
                     </div>
-                    <div style={{display:"flex",gap:6}}>
-                      <button style={{flex:1,background:"linear-gradient(135deg,#0088cc,#229ED9)",border:"none",borderRadius:9,padding:"7px 4px",color:"#fff",fontWeight:700,fontSize:10,cursor:"pointer"}}
-                        onClick={async()=>{
-                          const tg=window.Telegram?.WebApp;
-                          if(!tg){addFloat("Open in Telegram!","#ef4444");return;}
-                          try{
-                            addFloat("Loading...","#6366f1");
-                            const {createStarsInvoice}=await import('./firebase');
-                            const link=await createStarsInvoice(pkg.n, pkg);
-                            tg.openInvoice(link,(status)=>{
-                              if(status==='paid'){
-                                setCoins(c=>c+pkg.coins);
-                                if(pkg.bonusSyr>0)setSyringes(s=>s+pkg.bonusSyr);
-                                if(pkg.bonusPill>0)setMeds(m=>({...m,recovery:(m.recovery||0)+pkg.bonusPill}));
-                                if(pkg.bonusBoost>0)setMeds(m=>({...m,breedboost:(m.breedboost||0)+pkg.bonusBoost}));
-                                addFloat(`+${pkg.coins.toLocaleString()} Coins!`,"#fbbf24");
-                              }
-                            });
-                          }catch{
-                            addFloat("Try again!","#ef4444");
-                          }
-                        }}>
-                        ⭐ {pkg.stars} Stars
-                      </button>
-                      <button style={{flex:1,background:"linear-gradient(135deg,#0098EA,#007ACD)",border:"none",borderRadius:9,padding:"7px 4px",color:"#fff",fontWeight:700,fontSize:10,cursor:"pointer"}}
-                        onClick={async()=>{
-                          if(!tonAddress){addFloat("Connect wallet first!","#ef4444");return;}
-                          try{
-                            await tonConnectUI.sendTransaction({
-                              validUntil:Math.floor(Date.now()/1000)+600,
-                              messages:[{
-                                address:DEV_WALLET,
-                                amount:String(Math.round(pkg.ton*1e9)),
-                              }]
-                            });
-                            setCoins(c=>c+pkg.coins);
-                            if(pkg.bonusSyr>0)setSyringes(s=>s+pkg.bonusSyr);
-                            if(pkg.bonusPill>0)setMeds(m=>({...m,recovery:(m.recovery||0)+pkg.bonusPill}));
-                            if(pkg.bonusBoost>0)setMeds(m=>({...m,breedboost:(m.breedboost||0)+pkg.bonusBoost}));
-                            addFloat(`+${pkg.coins.toLocaleString()} Coins!`,"#fbbf24");
-                          }catch{
-                            addFloat("Transaction cancelled","#ef4444");
-                          }
-                        }}>
-                        💎 {pkg.ton} TON
-                      </button>
-                    </div>
                   </div>
-                ))}
+                );})}
               </div>
             </G>
 

@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { TonConnectButton, useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
 import './index.css';
 import {
   BREEDS, RARITIES, DUKY_R, SEEDS, TIER_COLORS, RECIPES, MEDS, UPGRADES,
@@ -80,6 +81,18 @@ export default function DuckFarm(){
     lvlPass, buyLvlPass,
     telegramUser, playerId,
   } = useGameState();
+
+  const tonAddress = useTonAddress();
+  const [tonConnectUI] = useTonConnectUI();
+
+  // Save wallet address to Firebase when connected
+  useEffect(()=>{
+    if(tonAddress && playerId){
+      import('./firebase').then(({savePlayerData})=>{
+        savePlayerData(playerId, { walletAddress: tonAddress }).catch(()=>{});
+      });
+    }
+  },[tonAddress, playerId]);
 
   const[selSeed,  setSelSeed]  =useState(null);
   const[selDuck,  setSelDuck]  =useState(null);
@@ -2536,9 +2549,24 @@ export default function DuckFarm(){
                 </G>
                 <G><SL>Collection</SL><div style={{display:"flex",flexWrap:"wrap",gap:7,marginTop:6,justifyContent:"center"}}>{ducks.map(d=><div key={d.id} style={{textAlign:"center"}}><Duck breedId={d.bid} duckId={d.id} size={46} lvl={d.lvl} animType={animMap[d.id]}/><div style={{marginTop:1}}><B color={gLC(d.lvl)} size={7}>Lvl {d.lvl}</B></div></div>)}</div></G>
                 <G style={{borderColor:"rgba(167,139,250,0.25)",background:"linear-gradient(135deg,rgba(76,29,149,0.25),rgba(10,10,28,0.85))"}}>
-                  <div style={{fontWeight:700,fontSize:13,color:"#a78bfa",fontFamily:"'Orbitron',sans-serif",marginBottom:5}}>WEB3 · DUKY</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:10}}>DUKY earned from: level up · mining · leagues · tasks<br/>Connect wallet to transfer on blockchain!</div>
-                  <button style={{...S.breedBtn,background:"linear-gradient(135deg,#4c1d95,#2563eb)"}}>Connect Wallet</button>
+                  <div style={{fontWeight:700,fontSize:13,color:"#a78bfa",fontFamily:"'Orbitron',sans-serif",marginBottom:5}}>WEB3 · TON WALLET</div>
+                  {tonAddress?(
+                    <div>
+                      <div style={{background:"rgba(74,222,128,0.08)",border:"1px solid rgba(74,222,128,0.25)",borderRadius:10,padding:"8px 10px",marginBottom:8}}>
+                        <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:2}}>CONNECTED WALLET</div>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#4ade80",wordBreak:"break-all"}}>{tonAddress}</div>
+                      </div>
+                      <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginBottom:8}}>Your DUKY airdrop will be sent to this address on Oct 1, 2026.</div>
+                      <div style={{display:"flex",gap:7}}>
+                        <div style={{flex:1}}><TonConnectButton style={{width:"100%"}}/></div>
+                      </div>
+                    </div>
+                  ):(
+                    <div>
+                      <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:10}}>Connect your TON wallet to receive the DUKY airdrop on Oct 1, 2026.<br/><span style={{color:"#fbbf24"}}>Works with Tonkeeper, MyTonWallet & more.</span></div>
+                      <TonConnectButton/>
+                    </div>
+                  )}
                 </G>
                 {(()=>{
                   const circulating=+(DUKY_TOTAL_SUPPLY-dukyBurned).toFixed(4);

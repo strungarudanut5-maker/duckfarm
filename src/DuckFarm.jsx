@@ -367,8 +367,13 @@ export default function DuckFarm(){
   },[ducks,triggerAnim]);
 
   const startAd = useCallback((onDone) => {
-    setAdPlaying(() => onDone);
-    setAdCountdown(5);
+    try {
+      const adController = window.Adsgram?.init({ blockId: "30800", debug: false });
+      if (!adController) { onDone(); return; }
+      adController.show().then(() => { onDone(); }).catch(() => {});
+    } catch {
+      onDone();
+    }
   }, []);
 
   useEffect(() => {

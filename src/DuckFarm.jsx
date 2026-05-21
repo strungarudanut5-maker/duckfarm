@@ -1161,7 +1161,7 @@ export default function DuckFarm(){
 
         {/* ═══ FARM ═══ */}
         {tab==="farm"&&(
-          <div style={S.col}>
+          <div style={S.col} className="tab-content">
             <div style={{display:"flex",gap:7}}>
               {[["ducks","Ducks"],["plants","Crops"],["tap","DUKY"]].map(([st,lb])=>(
                 <button key={st} style={{...S.subTab,...(subTab===st?S.subOn:{})}} onClick={()=>setSubTab(st)}>{lb}</button>
@@ -1509,7 +1509,7 @@ export default function DuckFarm(){
 
         {/* ═══ LAB + CLINIC ═══ */}
         {tab==="lab"&&(
-          <div style={S.col}>
+          <div style={S.col} className="tab-content">
             <div style={{display:"flex",gap:7}}>
               {[["breed","Breed"],["clinic","Clinic"]].map(([lt,lb])=>(
                 <button key={lt} style={{...S.subTab,...(labTab===lt?S.subOn:{}),...(lt==="clinic"&&tiredCount>0?{borderColor:"rgba(239,68,68,0.5)",color:labTab===lt?"#ef4444":"rgba(239,68,68,0.6)"}:{})}} onClick={()=>setLabTab(lt)}>
@@ -1726,7 +1726,7 @@ export default function DuckFarm(){
 
         {/* ═══ SHOP ═══ */}
         {tab==="shop"&&(
-          <div style={S.col}>
+          <div style={S.col} className="tab-content">
             <div style={{display:"flex",gap:7}}>
               {[["store","Store"],["market","Market"],["tasks","Tasks"]].map(([st,lb])=>(
                 <button key={st} style={{...S.subTab,...(shopTab===st?S.subOn:{}),...(st==="tasks"&&completedCount>claimedCount?{borderColor:"rgba(251,191,36,0.5)",color:shopTab===st?"#fbbf24":"rgba(251,191,36,0.6)"}:{})}} onClick={()=>setShopTab(st)}>
@@ -2268,7 +2268,7 @@ export default function DuckFarm(){
           </div>
         )}
         {tab==="league"&&leagueSubTab==="daily"&&(
-          <div style={S.col}>
+          <div style={S.col} className="tab-content">
 
             {/* AIRDROP COUNTDOWN */}
             {(()=>{

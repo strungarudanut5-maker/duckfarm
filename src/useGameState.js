@@ -211,6 +211,21 @@ export function useGameState() {
   // Bucla de timp (1s)
   useEffect(()=>{const iv=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(iv);},[]);
 
+  // Midnight reset — detecteaza schimbarea zilei cand jocul e deschis
+  const lastDateRef = useRef(new Date().toDateString());
+  useEffect(()=>{
+    const today = new Date().toDateString();
+    if(today !== lastDateRef.current){
+      lastDateRef.current = today;
+      setTapsToday(0); setAdsToday(0);
+      setAdCoinsToday(0); setAdSyrToday(0);
+      setDailyTasks(getDailyTasks()); setTaskClaimed({});
+      setCompletionBonusClaimed(false);
+      setMineSkips(0); setBreedSkips(0); setBreedCdSkips(0); setLvlSkips(0);
+      setSpinUsedToday(false);
+    }
+  },[now]); // eslint-disable-line
+
   // Firebase: incarca datele la mount dacă user-ul are Telegram ID
   useEffect(()=>{
     if(!playerId) return;

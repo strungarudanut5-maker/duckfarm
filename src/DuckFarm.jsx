@@ -1802,7 +1802,7 @@ export default function DuckFarm(){
             {/* === LUCKY HATCH — Rațe garantate === */}
             <G style={{borderColor:"rgba(240,171,252,0.35)",background:"rgba(240,171,252,0.04)"}}>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:"#f0abfc",marginBottom:3}}>LUCKY HATCH</div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:8}}>Rată garantată — fără RNG, fără seringi.</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:8}}>Guaranteed duck — no RNG, no syringes.</div>
               {HATCH_EGGS.map(h=>{
                 const can=coins>=h.coins&&ducks.length<slots;
                 const r=gR(h.rid);

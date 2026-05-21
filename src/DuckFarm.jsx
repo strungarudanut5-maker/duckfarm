@@ -95,6 +95,27 @@ export default function DuckFarm(){
     }
   },[tonAddress, playerId]);
 
+  // Notificare level up cooldown
+  useEffect(()=>{
+    ducks.forEach(d=>{
+      if(d.lvlUpAt && d.lvlUpAt > Math.floor(now/1000)){
+        const msLeft=(d.lvlUpAt - Math.floor(now/1000))*1000;
+        const r=gR(d.rid);
+        scheduleNotif('lvlup_'+d.id,'Level Up Ready!',`${d.nickname||r?.name||'Duck'} cooldown finished — level up now!`,msLeft);
+      }
+    });
+  },[ducks]); // eslint-disable-line
+
+  // Notificare daily login reminder (la 20:00 in fiecare zi)
+  useEffect(()=>{
+    const now2=new Date();
+    const target=new Date();
+    target.setHours(20,0,0,0);
+    if(target<=now2) target.setDate(target.getDate()+1);
+    const delay=target.getTime()-now2.getTime();
+    scheduleNotif('daily_login','Daily Reminder','Come back to Duky Farm — your ducks are waiting! 🦆',delay);
+  },[]); // eslint-disable-line
+
   // Fetch real leaderboard from Firebase every 60s
   useEffect(()=>{
     const playerName = telegramUser?.first_name || "Duck Farmer";
@@ -1485,7 +1506,7 @@ export default function DuckFarm(){
                     const pct=plot?Math.min((elapsed/plot.gt)*100,100):0;
                     const ready=plot&&pct>=100;
                     return( 
-                      <div key={i} onClick={()=>plot?harvestPlot(i):plantSeed(i, selSeed)}
+                      <div key={i} onClick={()=>{if(plot){harvestPlot(i);cancelNotif('crop_'+i);}else{plantSeed(i,selSeed);const s=SEEDS.find(x=>x.id===selSeed);if(s)scheduleNotif('crop_'+i,'Crops Ready!',`${s.name} is ready to harvest!`,s.grow*60*1000);}}}
                         style={{aspectRatio:"1",borderRadius:12,border:`2px solid ${ready?"#4ade80":plot?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.06)"}`,background:ready?"rgba(74,222,128,0.07)":plot?"rgba(99,102,241,0.04)":"rgba(120,80,40,0.1)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",padding:5,boxShadow:ready?"0 0 12px rgba(74,222,128,0.25)":"none"}}>
                         {!plot&&<><div style={{fontSize:8,color:"rgba(255,255,255,0.2)"}}>Tap to plant</div></>}
                         {plot&&!ready&&(

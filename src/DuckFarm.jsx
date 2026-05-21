@@ -1912,7 +1912,7 @@ export default function DuckFarm(){
             {/* === RESURSE DE BAZĂ === */}
             <SL>Slots ({slots}/8)</SL>
             {slots<8
-              ?<G><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{flex:1}}><div style={{fontWeight:700,fontSize:12}}>Slot {slots+1}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Loc nou pentru o rață</div></div><button style={{...S.btn,opacity:coins>=SLOT_COSTS[slots]?1:0.4}} onClick={buySlot}><CI/>{SLOT_COSTS[slots]}</button></div></G>
+              ?<G><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{flex:1}}><div style={{fontWeight:700,fontSize:12}}>Slot {slots+1}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>New slot for a duck</div></div><button style={{...S.btn,opacity:coins>=SLOT_COSTS[slots]?1:0.4}} onClick={buySlot}><CI/>{SLOT_COSTS[slots]}</button></div></G>
               :<G><div style={{textAlign:"center",color:"#4ade80",fontSize:12}}>All slots unlocked!</div></G>
             }
             <SL>Syringes</SL>

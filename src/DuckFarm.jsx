@@ -84,6 +84,7 @@ export default function DuckFarm(){
 
   const tonAddress = useTonAddress();
   const [tonConnectUI] = useTonConnectUI();
+  const myScore=+(eps*60).toFixed(2);
 
   // Save wallet address to Firebase when connected
   useEffect(()=>{
@@ -380,7 +381,6 @@ export default function DuckFarm(){
   // EPS and mult computed in hook
   const miningCount=ducks.filter(d=>d.miningUntil&&d.miningUntil>now).length;
   const tiredCount=ducks.filter(d=>d.tired).length;
-  const myScore=+(eps*60).toFixed(2);
   const allPlayers=(()=>{
     const real=lbPlayers.map(p=>({
       id:p.telegramId, name:p.name, score:p.dailyScore,

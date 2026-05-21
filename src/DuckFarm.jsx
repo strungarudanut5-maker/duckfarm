@@ -6,7 +6,7 @@ import {
   SLOT_COSTS, SYR_COST, MAX_TAPS, MAX_WATER, MAX_ADS, MAX_MINE, MINE_SECS, CD_SECS,
   gR, gNR, gL, gLExtended, gLC, gBreed, fD, fT, GEN_OPP, GEN_WEEKLY_OPP, TREWARD, WEEKLY_TREWARD, ACHIEVEMENTS_TPL, STREAK_REWARDS, PRIZE_TABLE, WEEKLY_PRIZE_TABLE,
   COIN_PACKS, HATCH_EGGS, MYSTERY_EGGS, MAX_AD_COINS, MAX_AD_SYR, LVL_PASS_COST, RARITY_FEED_ADD,
-  DUKY_TOTAL_SUPPLY, AIRDROP_DATE, DEV_WALLET
+  DUKY_TOTAL_SUPPLY, AIRDROP_DATE, DEV_WALLET, BOT_USERNAME
 } from './constants';
 import { S } from './styles';
 import { Duck, G, B, PB, SL, Row } from './components';
@@ -86,6 +86,25 @@ export default function DuckFarm(){
   const [tonConnectUI] = useTonConnectUI();
   const myScore=+(eps*60).toFixed(2);
 
+  // Referral — detecteaza start_param la prima deschidere
+  useEffect(()=>{
+    if(!playerId) return;
+    const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+    if(!startParam) return;
+    const referrerId = startParam.replace("ref_","");
+    if(referrerId === playerId) return;
+    import('./firebase').then(({saveReferral})=>{
+      saveReferral(playerId, referrerId).then(()=>{
+        // Bonus pentru noul user
+        if(!localStorage.getItem("duky_refClaimed")){
+          localStorage.setItem("duky_refClaimed","1");
+          setDuky(v=>+(v+0.5).toFixed(4));
+          addFloat("+0.5 DUKY referral bonus!","#f0abfc");
+        }
+      }).catch(()=>{});
+    });
+  },[]); // eslint-disable-line
+
   // Save wallet address to Firebase when connected
   useEffect(()=>{
     if(tonAddress && playerId){
@@ -133,6 +152,14 @@ export default function DuckFarm(){
     return ()=>clearInterval(iv);
   },[myScore, tData.joined, weeklyTData.joined]); // eslint-disable-line
 
+  // Fetch referral count from Firebase
+  useEffect(()=>{
+    if(!playerId) return;
+    import('./firebase').then(({getReferralStats})=>{
+      getReferralStats(playerId).then(s=>setRefCount(s.count||0)).catch(()=>{});
+    });
+  },[playerId]);
+
   const[selSeed,  setSelSeed]  =useState(null);
   const[selDuck,  setSelDuck]  =useState(null);
   const[tab,      setTab]      =useState("farm");
@@ -148,6 +175,7 @@ export default function DuckFarm(){
   const[skipFor,  setSkipFor]  =useState(null);
   const[refInput, setRefInput] =useState("");
   const[refApplied,setRefApplied]=useState(false);
+  const[refCount,  setRefCount] =useState(0);
   const[sellFor,  setSellFor]  =useState(null);
   const[auctions, setAuctions] =useState(()=>{
     const saved=localStorage.getItem("duky_auctions");
@@ -2778,48 +2806,60 @@ export default function DuckFarm(){
 
             {profilTab==="achievements" && renderAchievements()}
 
-            {profilTab==="referral"&&(
-              <div style={S.col}>
-                <G style={{background:"linear-gradient(135deg,rgba(76,29,149,0.35),rgba(37,99,235,0.2))",borderColor:"rgba(167,139,250,0.3)",textAlign:"center"}} glow="#7c3aed">
-                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:700,color:"#a78bfa",marginBottom:5}}>REFERRAL PROGRAM</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.7}}>Invite friends → <b style={{color:"#f0abfc"}}>10% DUKY</b> from their earnings.<br/>Sub-referrals → <b style={{color:"#38bdf8"}}>2.5% DUKY</b></div>
-                </G>
-                <G>
-                  <div style={{display:"flex",gap:8}}>
-                    <div style={{flex:1,background:"rgba(240,171,252,0.08)",border:"1px solid rgba(240,171,252,0.2)",borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
-                      <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>LEVEL 1</div>
-                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:700,color:"#f0abfc"}}>10%</div>
+            {profilTab==="referral"&&(()=>{
+              const refLink = playerId ? `https://t.me/${BOT_USERNAME}?startapp=ref_${playerId}` : "";
+              const copyRef = ()=>{
+                if(!refLink) return;
+                navigator.clipboard?.writeText(refLink).then(()=>addFloat("Link copied!","#4ade80")).catch(()=>{
+                  try{ const ta=document.createElement("textarea"); ta.value=refLink; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); addFloat("Link copied!","#4ade80"); }catch(e){ addFloat("Copy failed","#ef4444"); }
+                });
+              };
+              const shareOnTelegram = ()=>{
+                const text = encodeURIComponent(`Join me on Duky Farm! Earn DUKY, breed ducks, and mine crypto! ${refLink}`);
+                window.open(`https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${text}`,"_blank");
+              };
+              const shareOnWhatsApp = ()=>{
+                const text = encodeURIComponent(`Join me on Duky Farm! Earn DUKY, breed ducks, and mine crypto!\n${refLink}`);
+                window.open(`https://wa.me/?text=${text}`,"_blank");
+              };
+              return(
+                <div style={S.col}>
+                  <G style={{background:"linear-gradient(135deg,rgba(76,29,149,0.35),rgba(37,99,235,0.2))",borderColor:"rgba(167,139,250,0.3)",textAlign:"center"}} glow="#7c3aed">
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:700,color:"#a78bfa",marginBottom:5}}>REFERRAL PROGRAM</div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.7}}>Invite friends and earn <b style={{color:"#f0abfc"}}>+0.5 DUKY</b> bonus per referral.<br/>Your friend gets <b style={{color:"#4ade80"}}>+0.5 DUKY</b> too!</div>
+                  </G>
+                  <G style={{borderColor:"rgba(251,191,36,0.25)"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                      <SL style={{margin:0}}>Your Referral Link</SL>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>Friends invited:</span>
+                        <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:"#fbbf24"}}>{refCount}</span>
+                      </div>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",color:"rgba(99,102,241,0.4)",fontSize:16}}>→</div>
-                    <div style={{flex:1,background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
-                      <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>LEVEL 2</div>
-                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:700,color:"#38bdf8"}}>2.5%</div>
-                    </div>
-                  </div>
-                </G>
-                <G style={{borderColor:"rgba(251,191,36,0.25)"}}>
-                  <SL>Your Code</SL>
-                  <div style={{display:"flex",gap:8,marginTop:5,alignItems:"center"}}>
-                    <div style={{flex:1,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",borderRadius:10,padding:"9px 11px",fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:"#fbbf24",letterSpacing:2}}>DUCK-X7K9</div>
-                    <button style={{...S.btn,padding:"9px 13px"}} onClick={()=>addFloat("Copied!","#4ade80")}>📋</button>
-                  </div>
-                  <div style={{display:"flex",gap:7,marginTop:7}}>
-                    <button style={{...S.smallBtn,flex:1}} onClick={()=>addFloat("Telegram…","#38bdf8")}>Telegram</button>
-                    <button style={{...S.smallBtn,flex:1,background:"linear-gradient(135deg,#1d1d1d,#1a8917)"}} onClick={()=>addFloat("WhatsApp…","#4ade80")}>WhatsApp</button>
-                  </div>
-                </G>
-                {!refApplied&&(
-                  <G>
-                    <SL>Have a code?</SL>
-                    <div style={{display:"flex",gap:8,marginTop:5}}>
-                      <input value={refInput} onChange={e=>setRefInput(e.target.value.toUpperCase())} placeholder="DUCK-XXXXXX"
-                        style={{flex:1,background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.25)",borderRadius:9,padding:"7px 10px",color:"#e2e8f0",fontFamily:"'Orbitron',sans-serif",fontSize:11,outline:"none"}}/>
-                      <button style={S.btn} onClick={()=>{if(refInput.startsWith("DUCK-")&&refInput.length>=10){setRefApplied(true);addFloat("🤝 Activated!","#4ade80");}else addFloat("Invalid code","#ef4444");}}>Apply</button>
+                    {playerId?(
+                      <>
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                          <div style={{flex:1,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",borderRadius:10,padding:"8px 10px",fontSize:9,color:"#fbbf24",wordBreak:"break-all",lineHeight:1.5}}>{refLink}</div>
+                          <button style={{...S.btn,padding:"9px 13px",flexShrink:0}} onClick={copyRef}>📋</button>
+                        </div>
+                        <div style={{display:"flex",gap:7,marginTop:8}}>
+                          <button style={{...S.smallBtn,flex:1,background:"linear-gradient(135deg,rgba(29,155,240,0.25),rgba(29,155,240,0.15))",borderColor:"rgba(29,155,240,0.4)",color:"#38bdf8"}} onClick={shareOnTelegram}>Share on Telegram</button>
+                          <button style={{...S.smallBtn,flex:1,background:"linear-gradient(135deg,rgba(37,211,102,0.25),rgba(37,211,102,0.15))",borderColor:"rgba(37,211,102,0.4)",color:"#4ade80"}} onClick={shareOnWhatsApp}>Share on WhatsApp</button>
+                        </div>
+                      </>
+                    ):(
+                      <div style={{textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:11,padding:"12px 0"}}>Open in Telegram to get your referral link</div>
+                    )}
+                  </G>
+                  <G style={{borderColor:"rgba(99,102,241,0.2)"}}>
+                    <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",lineHeight:1.8,textAlign:"center"}}>
+                      Share your link → friend opens the game → both get <b style={{color:"#f0abfc"}}>+0.5 DUKY</b> instantly!<br/>
+                      <span style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}>DUKY is airdropped to all holders before listing.</span>
                     </div>
                   </G>
-                )}
-              </div>
-            )}
+                </div>
+              );
+            })()}
 
             {profilTab==="social"&&(
               <div style={S.col}>

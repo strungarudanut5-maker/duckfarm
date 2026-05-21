@@ -175,6 +175,7 @@ export const COIN_PACKS = [
   {n:"Elite",   p:"14.99€", ton:3.0, stars:750, e:"👑", c:"#fbbf24", coins:15000, bonusSyr:40, bonusBoost:3, bonusPill:5, desc:"+40💉 +3⚡ +5💊"},
 ];
 export const DEV_WALLET="UQB2dbOpaA5TY8Nb8YC2LmGBKlVRe2IP9HXNWG6kV_6-8HPV";
+export const BOT_USERNAME=process.env.REACT_APP_BOT_USERNAME||"DukyFarmBot";
 
 export const HATCH_EGGS = [
   {rid:"rare",      name:"Rare",      emoji:"💎", coins:1500,  color:"#38bdf8", desc:"Skip breeding RNG"},

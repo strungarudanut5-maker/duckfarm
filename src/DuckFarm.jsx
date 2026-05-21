@@ -94,12 +94,31 @@ export default function DuckFarm(){
     }
   },[tonAddress, playerId]);
 
+  // Fetch real leaderboard from Firebase every 60s
+  useEffect(()=>{
+    const playerName = telegramUser?.first_name || "Duck Farmer";
+    const fetchAndSave = ()=>{
+      import('./firebase').then(({fetchLeaderboard, saveTournamentScore})=>{
+        const daily  = tData.joined   ? myScore : 0;
+        const weekly = weeklyTData.joined ? myScore : 0;
+        if(playerId) saveTournamentScore(playerId, playerName, daily, weekly).catch(()=>{});
+        fetchLeaderboard("daily",  20).then(rows=>setLbPlayers(rows)).catch(()=>{});
+        fetchLeaderboard("weekly", 20).then(rows=>setWLbPlayers(rows)).catch(()=>{});
+      });
+    };
+    fetchAndSave();
+    const iv = setInterval(fetchAndSave, 60000);
+    return ()=>clearInterval(iv);
+  },[myScore, tData.joined, weeklyTData.joined]); // eslint-disable-line
+
   const[selSeed,  setSelSeed]  =useState(null);
   const[selDuck,  setSelDuck]  =useState(null);
   const[tab,      setTab]      =useState("farm");
   const[sortBy,   setSortBy]   =useState("id");
   const[subTab,   setSubTab]   =useState("ducks");
   const[profilTab,setProfilTab]=useState("wallet");
+  const[lbPlayers, setLbPlayers] =useState([]);
+  const[wLbPlayers,setWLbPlayers]=useState([]);
   const[activeTier,setActiveTier]=useState(0);
   const[duckIdx,  setDuckIdx]  =useState(0);
   const[nicknameFor,setNicknameFor]=useState(null);
@@ -362,9 +381,17 @@ export default function DuckFarm(){
   const miningCount=ducks.filter(d=>d.miningUntil&&d.miningUntil>now).length;
   const tiredCount=ducks.filter(d=>d.tired).length;
   const myScore=+(eps*60).toFixed(2);
-  const _myPlayerEntry={id:"me",name:"You",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true};
-  const allPlayers=[...tData.opponents,...(tData.joined?[_myPlayerEntry]:[])].sort((a,b)=>b.score-a.score);
-  const myRank=tData.joined?(allPlayers.findIndex(p=>p.isPlayer)+1):null;
+  const allPlayers=(()=>{
+    const real=lbPlayers.map(p=>({
+      id:p.telegramId, name:p.name, score:p.dailyScore,
+      rarityId:"common", isPlayer:p.telegramId===playerId,
+    }));
+    if(tData.joined && !real.find(p=>p.isPlayer)){
+      real.push({id:"me",name:telegramUser?.first_name||"You",score:Math.floor(myScore),rarityId:"common",isPlayer:true});
+    }
+    return real.sort((a,b)=>b.score-a.score);
+  })();
+  const myRank=tData.joined?(allPlayers.findIndex(p=>p.isPlayer)+1)||null:null;
 
   useEffect(()=>{
     if(breedRes?.newId) {
@@ -2314,7 +2341,7 @@ export default function DuckFarm(){
               <G style={{background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1))",borderColor:"rgba(99,102,241,0.4)",textAlign:"center"}} glow="#6366f1">
                 <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:900,color:"#a78bfa",marginBottom:6}}>DAILY TOURNAMENT</div>
                 <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.7,marginBottom:10}}>
-                  Compete against {tData.opponents.length} other players.<br/>
+                  Compete against {Math.max(0,allPlayers.length-1)} other players.<br/>
                   Earn eggs to climb the leaderboard &amp; win prizes!<br/>
                   <span style={{color:"rgba(255,255,255,0.3)",fontSize:10}}>Time left: {fT(Math.max(0,Math.floor((tData.endTime-now)/1000)))}</span>
                 </div>
@@ -2377,9 +2404,17 @@ export default function DuckFarm(){
 
         {tab==="league"&&leagueSubTab==="weekly"&&(()=>{
           const wEnded=weeklyTData.endTime<=now;
-          const wOpp=weeklyTData.opponents;
-          const wAll=[...wOpp,...(weeklyTData.joined?[{id:"me",name:"You",score:myScore,rarityId:ducks.length>0?ducks.reduce((b,d)=>{const o=["common","rare","epic","legendary","mythic"];return o.indexOf(d.rid)>o.indexOf(b)?d.rid:b;},"common"):"common",isPlayer:true}]:[])].sort((a,b)=>b.score-a.score);
-          const wRank=weeklyTData.joined?(wAll.findIndex(p=>p.isPlayer)+1):null;
+          const wAll=(()=>{
+            const real=wLbPlayers.map(p=>({
+              id:p.telegramId, name:p.name, score:p.weeklyScore,
+              rarityId:"common", isPlayer:p.telegramId===playerId,
+            }));
+            if(weeklyTData.joined && !real.find(p=>p.isPlayer)){
+              real.push({id:"me",name:telegramUser?.first_name||"You",score:Math.floor(myScore),rarityId:"common",isPlayer:true});
+            }
+            return real.sort((a,b)=>b.score-a.score);
+          })();
+          const wRank=weeklyTData.joined?(wAll.findIndex(p=>p.isPlayer)+1)||null:null;
           const wRew=WEEKLY_TREWARD(wRank);
           const wHasSeed=wRew.seeds&&(wRew.seeds.legendary+wRew.seeds.medium+wRew.seeds.basic)>0;
           const wSeedLabel=wRew.seeds?[wRew.seeds.legendary>0&&`${wRew.seeds.legendary}🌻`,wRew.seeds.medium>0&&`${wRew.seeds.medium}🌽`,wRew.seeds.basic>0&&`${wRew.seeds.basic}🌾`].filter(Boolean).join(" "):"";

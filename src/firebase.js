@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey:            process.env.REACT_APP_FIREBASE_API_KEY,
@@ -33,4 +33,22 @@ export async function createPlayer(telegramId, telegramUser) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }, { merge: true });
+}
+
+export async function saveTournamentScore(telegramId, name, dailyScore, weeklyScore) {
+  const ref = doc(db, "tournament", String(telegramId));
+  await setDoc(ref, {
+    telegramId: String(telegramId),
+    name: name || "Duck Farmer",
+    dailyScore:  Math.floor(dailyScore  || 0),
+    weeklyScore: Math.floor(weeklyScore || 0),
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
+
+export async function fetchLeaderboard(type = "daily", maxPlayers = 20) {
+  const field = type === "weekly" ? "weeklyScore" : "dailyScore";
+  const q = query(collection(db, "tournament"), orderBy(field, "desc"), limit(maxPlayers));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data());
 }

@@ -1886,23 +1886,23 @@ export default function DuckFarm(){
                 
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:12}}>Mining Boost <span style={{color:"#fb923c"}}>×2 DUKY</span></div>
-                  <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>24h — toate mining-urile dau dublu DUKY</div>
-                  {miningBoostUntil>now&&<div style={{fontSize:9,color:"#fb923c",fontWeight:700,marginTop:2}}>ACTIV — {fT(Math.ceil((miningBoostUntil-now)/1000))} rămas</div>}
+                  <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>24h — all mining rewards give double DUKY</div>
+                  {miningBoostUntil>now&&<div style={{fontSize:9,color:"#fb923c",fontWeight:700,marginTop:2}}>ACTIVE — {fT(Math.ceil((miningBoostUntil-now)/1000))} left</div>}
                 </div>
                 <button style={{...S.btn,background:coins>=150?"linear-gradient(135deg,#92400e,#fb923c)":"rgba(99,102,241,0.1)",opacity:coins>=150?1:0.45,flexShrink:0}}
                   onClick={()=>{
                     if(coins<150)return;
                     setCoins(c=>c-150);
                     setMiningBoostUntil(Date.now()+24*3600*1000);
-                    addFloat("⚡ Mining 2x activ!","#fb923c");
+                    addFloat("⚡ Mining 2x active!","#fb923c");
                   }}><CI/>150</button>
               </div>
               {/* Breed Boost (suplimentar față de cel din Clinic) */}
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:12}}>Breed Boost <span style={{color:"#a78bfa"}}>×2 șansă</span></div>
-                  <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>O singură utilizare la următorul breeding</div>
+                  <div style={{fontWeight:700,fontSize:12}}>Breed Boost <span style={{color:"#a78bfa"}}>×2 chance</span></div>
+                  <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Single use — applies to next breeding</div>
                 </div>
                 <button style={{...S.btn,background:coins>=35?"linear-gradient(135deg,#4c1d95,#a78bfa)":"rgba(99,102,241,0.1)",opacity:coins>=35?1:0.45,flexShrink:0}}
                   onClick={()=>{if(coins<35)return;setCoins(c=>c-35);setMeds(m=>({...m,breedboost:(m.breedboost||0)+1}));addFloat("+1⚡ Boost!","#a78bfa");}}><CI/>35</button>

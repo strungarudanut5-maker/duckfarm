@@ -252,8 +252,10 @@ export default function DuckFarm(){
   const [stakeInput,  setStakeInput]  =useState("");
   const [splashVisible,setSplashVisible]=useState(true);
   const [celebration,  setCelebration]  =useState(null);
+  const [tabBounce,    setTabBounce]    =useState(null);
   const prevDuckLvls  =useRef({});
   const celebTimerRef =useRef(null);
+  const tabBounceRef  =useRef(null);
   const wheelRef=useRef(null);
   const rafRef=useRef(null);
   const wheelAngleRef=useRef(0);
@@ -656,6 +658,9 @@ export default function DuckFarm(){
 
   const handleTabChange = (id) => {
     setTab(id);
+    if(tabBounceRef.current) clearTimeout(tabBounceRef.current);
+    setTabBounce(id);
+    tabBounceRef.current=setTimeout(()=>setTabBounce(null),450);
     if(!seenTabsRef.current.has(id)){
       seenTabsRef.current.add(id);
       localStorage.setItem("duky_seenTabs", JSON.stringify([...seenTabsRef.current]));
@@ -1259,14 +1264,14 @@ export default function DuckFarm(){
         </div>
         <div style={S.statsRow}>
           {[
-            {e:"🥚",v:Math.floor(eggs),c:"#fbbf24"},
+            {e:"🥚",v:Math.floor(eggs),   c:"#fbbf24"},
             {e:null,img:"/coin.svg",v:Math.floor(coins),c:"#ffd700"},
-            {e:null,img:"/duky.svg",v:fD(duky),c:"#f0abfc"},
-            {e:"🌾",v:Math.floor(feed),c:"#4ade80"},
+            {e:null,img:"/duky.svg",v:fD(duky),         c:"#f0abfc"},
+            {e:"🌾",v:Math.floor(feed),   c:"#4ade80"},
           ].map(({e,img,v,c})=>(
-            <div key={img||e} style={{...S.chip,borderColor:`${c}28`,background:`${c}0d`}}>
+            <div key={img||e} style={{...S.chip,borderColor:`${c}28`,background:`${c}0d`,transition:"box-shadow .2s"}}>
               {img?<img src={img} alt="coin" style={{width:15,height:15,display:"block"}}/>:<span style={{fontSize:12}}>{e}</span>}
-              <span style={{fontSize:11,fontWeight:700,color:c,fontFamily:"'Orbitron',sans-serif"}}>{v}</span>
+              <span key={v} style={{fontSize:11,fontWeight:700,color:c,fontFamily:"'Orbitron',sans-serif",display:"inline-block",animation:"statPop 0.35s cubic-bezier(0.34,1.56,0.64,1)"}}>{v}</span>
             </div>
           ))}
         </div>
@@ -1276,12 +1281,12 @@ export default function DuckFarm(){
       <div style={S.tabs}>
         {TABS.map(t=>(
           <button key={t.id} style={{...S.tab,...(tab===t.id?S.tabOn:{})}} onClick={()=>handleTabChange(t.id)}>
-            <div style={{fontSize:14,position:"relative",filter:tab===t.id?"drop-shadow(0 0 5px #a78bfa)":"none",transition:"filter .25s"}}>
+            <div className={tabBounce===t.id?"tab-icon-bounce":""} style={{fontSize:16,position:"relative",filter:tab===t.id?"drop-shadow(0 0 6px #a78bfa)":"none",transition:"filter .25s",display:"inline-block"}}>
               {t.icon}
               {t.id==="lab"&&tiredCount>0&&<span style={{position:"absolute",top:-5,right:-7,background:"#ef4444",color:"#fff",fontSize:7,borderRadius:99,padding:"1px 3px",fontWeight:700}}>{tiredCount}</span>}
               {t.id==="shop"&&completedCount>claimedCount&&<span style={{position:"absolute",top:-5,right:-7,background:"#fbbf24",color:"#000",fontSize:7,borderRadius:99,padding:"1px 3px",fontWeight:700}}>{completedCount-claimedCount}</span>}
             </div>
-            <div style={{fontSize:8}}>{t.label}</div>
+            <div style={{fontSize:8,transition:"color .25s",color:tab===t.id?"#a78bfa":"rgba(255,255,255,0.45)"}}>{t.label}</div>
           </button>
         ))}
       </div>

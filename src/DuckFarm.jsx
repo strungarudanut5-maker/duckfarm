@@ -1445,7 +1445,7 @@ export default function DuckFarm(){
                             <div style={{fontSize:18}}>{seed?.emoji}</div>
                             <PB pct={pct} color="linear-gradient(90deg,#166534,#4ade80)" h={3}/>
                             <div style={{fontSize:8,color:"rgba(255,255,255,0.35)",marginTop:1}}>{Math.max(0,Math.ceil((plot.gt-elapsed)/60000))}m</div>
-                            <div onClick={e=>{e.stopPropagation();const sc=seed?.skip||5;if(coins<sc){addFloat(`Trebuie ${sc}🪙`,"#ef4444");return;}setCoins(c=>c-sc);setPlots(p=>p.map((pl,pi)=>pi===i?{...pl,at:Date.now()-pl.gt}:pl));addFloat(`⏩ -${sc}🪙`,"#fbbf24");}}
+                            <div onClick={e=>{e.stopPropagation();const sc=seed?.skip||5;if(coins<sc){addFloat(`Need ${sc}🪙`,"#ef4444");return;}setCoins(c=>c-sc);setPlots(p=>p.map((pl,pi)=>pi===i?{...pl,at:Date.now()-pl.gt}:pl));addFloat(`⏩ -${sc}🪙`,"#fbbf24");}}
                               style={{marginTop:2,background:"rgba(251,191,36,0.15)",border:"1px solid rgba(251,191,36,0.35)",borderRadius:6,padding:"2px 4px",fontSize:7,color:"#fbbf24",cursor:"pointer",fontWeight:700}}>Skip {seed?.skip}<CI s={9}/></div>
                           </div>
                         )}
@@ -1783,7 +1783,7 @@ export default function DuckFarm(){
             {/* === CUMPĂRĂ COINS (bani reali) === */}
             <G style={{borderColor:"rgba(251,191,36,0.4)"}}>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:"#fbbf24",marginBottom:3,display:"flex",alignItems:"center",gap:5}}><img src="/coin.svg" alt="coin" style={{width:16,height:16}}/> BUY COINS</div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:10}}>Apple Pay · Google Pay · Card — Accelerează-ți progresul</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",marginBottom:10}}>Apple Pay · Google Pay · Card — Boost your progress</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
                 {COIN_PACKS.map(pkg=>(
                   <div key={pkg.n} style={{background:`${pkg.c}10`,border:`2px solid ${pkg.c}44`,borderRadius:13,padding:"10px 8px",cursor:"pointer",textAlign:"center",position:"relative"}}
@@ -2012,7 +2012,7 @@ export default function DuckFarm(){
                           setAuctions(a=>[newAuc,...a]);
                           setDucks(d=>d.filter(dk=>dk.id!==duck.id));
                           setListFor(null);
-                          addFloat("Rața a fost listată!","#f0abfc");
+                          addFloat("Duck listed for auction!","#f0abfc");
                         }}>List for Auction</button>
                         <button style={{...S.btn,background:"rgba(255,255,255,0.08)"}} onClick={()=>setListFor(null)}>Cancel</button>
                       </div>
@@ -2043,7 +2043,7 @@ export default function DuckFarm(){
                                 }
                               </div>
                             </div>
-                            {isSelling&&<div style={{marginTop:5,fontSize:9,color:"#ef4444",textAlign:"center"}}>Vânzare instant și permanentă.</div>}
+                            {isSelling&&<div style={{marginTop:5,fontSize:9,color:"#ef4444",textAlign:"center"}}>Instant and permanent sale.</div>}
                           </G>
                         );
                       })}

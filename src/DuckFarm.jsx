@@ -1867,12 +1867,24 @@ export default function DuckFarm(){
                     </div>
                     <div style={{display:"flex",gap:6}}>
                       <button style={{flex:1,background:"linear-gradient(135deg,#0088cc,#229ED9)",border:"none",borderRadius:9,padding:"7px 4px",color:"#fff",fontWeight:700,fontSize:10,cursor:"pointer"}}
-                        onClick={()=>{
+                        onClick={async()=>{
                           const tg=window.Telegram?.WebApp;
-                          if(tg?.openInvoice){
-                            addFloat("Stars coming soon!","#6366f1");
-                          } else {
-                            addFloat("Open in Telegram!","#ef4444");
+                          if(!tg){addFloat("Open in Telegram!","#ef4444");return;}
+                          try{
+                            addFloat("Loading...","#6366f1");
+                            const {createStarsInvoice}=await import('./firebase');
+                            const link=await createStarsInvoice(pkg.n, pkg);
+                            tg.openInvoice(link,(status)=>{
+                              if(status==='paid'){
+                                setCoins(c=>c+pkg.coins);
+                                if(pkg.bonusSyr>0)setSyringes(s=>s+pkg.bonusSyr);
+                                if(pkg.bonusPill>0)setMeds(m=>({...m,recovery:(m.recovery||0)+pkg.bonusPill}));
+                                if(pkg.bonusBoost>0)setMeds(m=>({...m,breedboost:(m.breedboost||0)+pkg.bonusBoost}));
+                                addFloat(`+${pkg.coins.toLocaleString()} Coins!`,"#fbbf24");
+                              }
+                            });
+                          }catch{
+                            addFloat("Try again!","#ef4444");
                           }
                         }}>
                         ⭐ {pkg.stars} Stars

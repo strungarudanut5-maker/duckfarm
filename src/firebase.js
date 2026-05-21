@@ -13,6 +13,25 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
+export async function createStarsInvoice(packName, pack) {
+  const BOT_TOKEN = process.env.REACT_APP_TG_BOT_TOKEN;
+  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: `${packName} Coin Pack`,
+      description: `${pack.coins} coins + bonuses for Duky Farm`,
+      payload: packName,
+      currency: "XTR",
+      prices: [{ label: packName, amount: pack.stars }],
+      provider_token: "",
+    }),
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.description);
+  return data.result;
+}
+
 export async function loadPlayerData(telegramId) {
   const ref = doc(db, "players", String(telegramId));
   const snap = await getDoc(ref);
